@@ -14,7 +14,7 @@ func GetISOTime() string {
 }
 
 var azureHost = flag.String("ah", "", "自定义域名，用来加速微软服务器")
-var port = flag.Int64("port", 1233, "自定义域名，用来加速微软服务器")
+var port = flag.Int64("port", 1233, "自定义监听端口")
 
 func main() {
 	flag.Parse()
