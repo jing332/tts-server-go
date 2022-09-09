@@ -7,6 +7,7 @@ import (
 	"strconv"
 	"sync"
 	"time"
+	"tts-server-go/service/azure"
 )
 
 var rwLock sync.RWMutex
@@ -42,7 +43,7 @@ func azureAPIHandler(w http.ResponseWriter, r *http.Request) {
 
 	ssml, _ := io.ReadAll(r.Body)
 
-	b, err := getAudio(string(ssml), format)
+	b, err := azure.GetAudio(string(ssml), format)
 	if err != nil {
 		log.Println("获取音频失败:", err)
 		return
