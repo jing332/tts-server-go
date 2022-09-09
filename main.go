@@ -13,15 +13,15 @@ func GetISOTime() string {
 
 }
 
-var azureHost = *flag.String("ah", "", "自定义域名，用来加速微软服务器")
+var azureHost = flag.String("ah", "", "自定义域名，用来加速微软服务器")
+var port = flag.Int64("port", 1233, "自定义域名，用来加速微软服务器")
 
 func main() {
 	flag.Parse()
-	SetWssUrl(azureHost)
-
+	SetWssUrl(*azureHost)
 	log.SetLevel(log.DebugLevel)
 	log.SetFormatter(&logformat.Formatter{HideKeys: true,
 		TimestampFormat: "01-02|15:04:05",
 	})
-	StartServer()
+	StartServer(*port)
 }

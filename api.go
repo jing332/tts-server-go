@@ -11,10 +11,10 @@ import (
 
 var rwLock sync.RWMutex
 
-func StartServer() {
+func StartServer(port int64) {
 	http.HandleFunc("/api/azure", azureAPIHandler)
 	s := &http.Server{
-		Addr:           ":1233",
+		Addr:           ":" + strconv.FormatInt(port, 10),
 		ReadTimeout:    10 * time.Second,
 		WriteTimeout:   10 * time.Second,
 		MaxHeaderBytes: 1 << 20,
