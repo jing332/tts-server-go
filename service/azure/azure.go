@@ -136,6 +136,10 @@ func GetAudio(ssml, outputForamt string) ([]byte, error) {
 	wg.Wait()
 	wg = nil
 
+	if err != nil {
+		return nil, err //服务器返回的错误信息
+	}
+
 	elapsedTime := time.Since(startTime) / time.Millisecond // duration in ms
 	log.Infof("耗时: %dms\n", elapsedTime)
 
