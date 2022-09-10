@@ -14,7 +14,7 @@ import (
 var wssUrl = `wss://eastus.api.speech.microsoft.com/cognitiveservices/websocket/v1?TricType=AzureDemo&Authorization=bearer%20undefined&X-ConnectionId=`
 var conn *websocket.Conn = nil
 
-type TNextReaderCallBack func(*websocket.Conn, int, []byte)
+type TNextReaderCallBack func(*websocket.Conn, int, []byte, error) (closed bool)
 
 var onNextReader TNextReaderCallBack
 
@@ -28,7 +28,7 @@ func SetWssUrl(host string) {
 }
 
 func wssConn() (err error) {
-	log.Debugln("创建WebSocket连接...")
+	log.Debugln("创建WebSocket连接(Azure)...")
 	dl := websocket.Dialer{
 		EnableCompression: true,
 		HandshakeTimeout:  time.Second * 15,
@@ -43,27 +43,15 @@ func wssConn() (err error) {
 	if err != nil {
 		return fmt.Errorf("创建WebScoket连接失败:%s", err)
 	}
-	//经测试 空闲140s后服务器则会断开WebSocket连接
-	conn.SetCloseHandler(func(code int, text string) error {
-		log.Warnln("WebSocket连接已关闭:", text)
-		if err := conn.Close(); err != nil {
-			return err
-		}
-		conn = nil
-		return nil
-	})
 
-	//监听 用来判断连接是否关闭
+	//监听 用来判断连接是否关闭 (空闲140s后服务器则会断开WebSocket连接)
 	go func() {
 		for {
 			msgType, r, err := conn.ReadMessage()
-			onNextReader(conn, msgType, r) //将内容转发 方便处理
-			if err != nil {                //有错误 代表WebSocket关闭
-				err := (conn.CloseHandler())(-1, err.Error()) //使用conn的CloseHandler回调
-				if err != nil {
-					return
-				}
-				return
+			if closed := onNextReader(conn, msgType, r, err); closed {
+				conn.Close()
+				conn = nil
+				return //连接已关闭 退出监听
 			}
 		}
 	}()
@@ -71,16 +59,7 @@ func wssConn() (err error) {
 	return nil
 }
 
-func sendSsmlMsg(ssml string) error {
-	log.Debugln("发送SSML:", ssml)
-	msg := "Path: ssml\r\nX-RequestId: " + tools.GetUUID() + "\r\nX-Timestamp: " + service.GetISOTime() + "\r\nContent-Type: application/ssml+xml\r\n\r\n" + ssml
-	err := conn.WriteMessage(websocket.TextMessage, []byte(msg))
-	if err != nil {
-		return fmt.Errorf("发送SSML失败: %s", err)
-	}
-	return nil
-}
-
+// 发送配置消息，其中包括音频格式
 func sendPrefixInfo(outputFormat string) error {
 	uuid := tools.GetUUID()
 	m1 := "Path: speech.config\r\nX-RequestId: " + uuid + "\r\nX-Timestamp: " + service.GetISOTime() +
@@ -96,6 +75,17 @@ func sendPrefixInfo(outputFormat string) error {
 		return fmt.Errorf("发送Prefix2失败: %s", err)
 	}
 
+	return nil
+}
+
+// 发送SSML消息，其中包括要朗读的文本
+func sendSsmlMsg(ssml string) error {
+	log.Debugln("发送SSML:", ssml)
+	msg := "Path: ssml\r\nX-RequestId: " + tools.GetUUID() + "\r\nX-Timestamp: " + service.GetISOTime() + "\r\nContent-Type: application/ssml+xml\r\n\r\n" + ssml
+	err := conn.WriteMessage(websocket.TextMessage, []byte(msg))
+	if err != nil {
+		return fmt.Errorf("发送SSML失败: %s", err)
+	}
 	return nil
 }
 
@@ -122,13 +112,14 @@ func GetAudio(ssml, outputForamt string) ([]byte, error) {
 	wg := &sync.WaitGroup{}
 	wg.Add(1)
 	//处理服务器返回内容
-	onNextReader = func(c *websocket.Conn, msgType int, body []byte) {
-		if msgType == -1 && body == nil { //已经断开链接
-			log.Debugln("服务器返回内容为空！已断开WSS连接")
+	onNextReader = func(c *websocket.Conn, msgType int, body []byte, errMsg error) bool {
+		if msgType == -1 && body == nil && errMsg != nil { //已经断开链接
+			log.Warnln("服务器已断开WS连接", errMsg)
 			if wg != nil {
-				wg.Done()
+				err = errMsg
+				wg.Done() //切回主协程 在接收音频、消息错误时调用
 			}
-			return
+			return true //告诉调用者连接已经关闭了
 		}
 
 		if msgType == 2 {
@@ -138,8 +129,9 @@ func GetAudio(ssml, outputForamt string) ([]byte, error) {
 		} else if msgType == 1 && string(body)[len(string(body))-14:len(string(body))-6] == "turn.end" {
 			log.Infoln("音频接收完成")
 			wg.Done()
-			return
+			return false
 		}
+		return false
 	}
 	wg.Wait()
 	wg = nil
