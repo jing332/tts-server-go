@@ -29,6 +29,16 @@ func StartServer(port int64) {
 	}
 }
 
+func sendErrorMsg(w http.ResponseWriter, msg string) error {
+	log.Warnln("获取音频失败:", msg)
+	w.WriteHeader(http.StatusServiceUnavailable)
+
+	if _, err := w.Write([]byte(msg)); err != nil {
+		return err
+	}
+	return nil
+}
+
 // Microsoft Edge 大声朗读接口
 func edgeAPIHandler(w http.ResponseWriter, r *http.Request) {
 	rwLock.Lock()
@@ -36,18 +46,14 @@ func edgeAPIHandler(w http.ResponseWriter, r *http.Request) {
 	format := `webm-24khz-16bit-mono-opus`
 	ctxType := `audio/webm; codec=opus`
 
-	defer func(Body io.ReadCloser) {
-		err := Body.Close()
-		if err != nil {
-			log.Infoln(err)
-		}
-	}(r.Body)
-
+	defer r.Body.Close()
 	ssml, _ := io.ReadAll(r.Body)
 
 	b, err := edge.GetAudio(string(ssml), format)
 	if err != nil {
-		log.Println("获取音频失败:", err)
+		if e := sendErrorMsg(w, err.Error()); e != nil {
+			log.Warnln("发送错误消息失败:", e)
+		}
 		return
 	}
 	w.Header().Set("Content-Type", ctxType)
@@ -57,7 +63,7 @@ func edgeAPIHandler(w http.ResponseWriter, r *http.Request) {
 
 	_, err = w.Write(b)
 	if err != nil {
-		log.Println("写入数据失败:", err)
+		log.Println("写入音频数据失败:", err)
 		return
 	}
 }
@@ -69,20 +75,17 @@ func azureAPIHandler(w http.ResponseWriter, r *http.Request) {
 	format := `webm-24khz-16bit-mono-opus`
 	ctxType := `audio/webm; codec=opus`
 
-	defer func(Body io.ReadCloser) {
-		err := Body.Close()
-		if err != nil {
-			log.Infoln(err)
-		}
-	}(r.Body)
-
+	defer r.Body.Close()
 	ssml, _ := io.ReadAll(r.Body)
 
 	b, err := azure.GetAudio(string(ssml), format)
 	if err != nil {
-		log.Println("获取音频失败:", err)
+		if e := sendErrorMsg(w, err.Error()); e != nil {
+			log.Warnln("发送错误消息失败:", e)
+		}
 		return
 	}
+
 	w.Header().Set("Content-Type", ctxType)
 	w.Header().Set("Connection", "keep-alive")
 	w.Header().Set("Keep-Alive", "timeout=5")
@@ -90,7 +93,7 @@ func azureAPIHandler(w http.ResponseWriter, r *http.Request) {
 
 	_, err = w.Write(b)
 	if err != nil {
-		log.Println("写入数据失败:", err)
+		log.Warnln("写入音频数据失败:", err)
 		return
 	}
 }
