@@ -20,6 +20,7 @@ var onNextReader TNextReaderCallBack
 
 func wssConn() (err error) {
 	log.Debugln("创建WebSocket连接...")
+
 	dl := websocket.Dialer{
 		EnableCompression: true,
 		HandshakeTimeout:  time.Second * 15,
