@@ -49,7 +49,7 @@ func edgeAPIHandler(w http.ResponseWriter, r *http.Request) {
 	defer r.Body.Close()
 	ssml, _ := io.ReadAll(r.Body)
 
-	b, err := edge.GetAudio(string(ssml), format)
+	b, err := edge.GetAudioForRetry(string(ssml), format, 3)
 	if err != nil {
 		if e := sendErrorMsg(w, err.Error()); e != nil {
 			log.Warnln("发送错误消息失败:", e)
@@ -78,7 +78,7 @@ func azureAPIHandler(w http.ResponseWriter, r *http.Request) {
 	defer r.Body.Close()
 	ssml, _ := io.ReadAll(r.Body)
 
-	b, err := azure.GetAudio(string(ssml), format)
+	b, err := azure.GetAudioForRetry(string(ssml), format, 3)
 	if err != nil {
 		if e := sendErrorMsg(w, err.Error()); e != nil {
 			log.Warnln("发送错误消息失败:", e)

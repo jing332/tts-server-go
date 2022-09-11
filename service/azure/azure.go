@@ -49,7 +49,6 @@ func wssConn() (err error) {
 		for {
 			msgType, r, err := conn.ReadMessage()
 			if closed := onNextReader(conn, msgType, r, err); closed {
-				conn.Close()
 				conn = nil
 				return //连接已关闭 退出监听
 			}
@@ -102,12 +101,7 @@ func GetAudio(ssml, outputForamt string) ([]byte, error) {
 	if err != nil {
 		return nil, fmt.Errorf("发送Prefix消息失败: %s", err)
 	}
-	err = sendSsmlMsg(ssml)
-	if err != nil {
-		return nil, fmt.Errorf("发送SSML消息失败: %s", err)
-	}
 
-	log.Debugln("接收 消息/音频...")
 	var AudioData []byte
 	wg := &sync.WaitGroup{}
 	wg.Add(1)
@@ -133,6 +127,12 @@ func GetAudio(ssml, outputForamt string) ([]byte, error) {
 		}
 		return false
 	}
+
+	err = sendSsmlMsg(ssml)
+	if err != nil {
+		return nil, fmt.Errorf("发送SSML消息失败: %s", err)
+	}
+	log.Debugln("接收 消息/音频...")
 	wg.Wait()
 	wg = nil
 
@@ -148,4 +148,19 @@ func GetAudio(ssml, outputForamt string) ([]byte, error) {
 	}
 
 	return AudioData, nil
+}
+
+func GetAudioForRetry(ssml, outputFormat string, retryCount int) ([]byte, error) {
+	body, err := GetAudio(ssml, outputFormat)
+	if err != nil {
+		for i := 0; i < retryCount; i++ {
+			log.Warnf("第%d次重试...⬇⬇⬇", i+1)
+			body, err = GetAudio(ssml, outputFormat)
+			if err == nil { //无错误
+				break
+			}
+		}
+	}
+
+	return body, err
 }
