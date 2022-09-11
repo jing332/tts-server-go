@@ -1,4 +1,10 @@
 # 下载
+
+请从 [Actions](https://github.com/jing332/tts-server-go/actions) 下载最新代码构建程序。（点击顶部最新构建记录，并下滑点击版本架构以下载zip压缩包。）
+
+
+
+蓝奏云不一定同步更新:
 https://jing332.lanzouw.com/b09hnlbob
 密码:1234
 
