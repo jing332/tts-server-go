@@ -31,10 +31,10 @@ jobs:
         uses: actions/setup-go@v2.1.3
         with:
           go-version: 1.19.1
-      - name: Get TAG
-        run: |
-          echo "tts_tag=$(sed -n '1p' CHANGELOG.md)" >> $GITHUB_ENV
-          sed -i '1d' CHANGELOG.md
+      # - name: Get TAG
+      #   run: |
+      #     echo "tts_tag=$(sed -n '1p' CHANGELOG.md)" >> $GITHUB_ENV
+      #     sed -i '1d' CHANGELOG.md
       - name: Cache downloaded module
         uses: actions/cache@v2
         with:
