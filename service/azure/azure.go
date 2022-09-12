@@ -28,7 +28,7 @@ func SetWssUrl(host string) {
 }
 
 func wssConn() (err error) {
-	log.Debugln("创建WebSocket连接(Azure)...")
+	log.Infoln("创建WebSocket连接(Azure)...")
 	dl := websocket.Dialer{
 		EnableCompression: true,
 		HandshakeTimeout:  time.Second * 15,
@@ -79,7 +79,7 @@ func sendPrefixInfo(outputFormat string) error {
 
 // 发送SSML消息，其中包括要朗读的文本
 func sendSsmlMsg(ssml string) error {
-	log.Debugln("发送SSML:", ssml)
+	log.Infoln("发送SSML:", ssml)
 	msg := "Path: ssml\r\nX-RequestId: " + tools.GetUUID() + "\r\nX-Timestamp: " + service.GetISOTime() + "\r\nContent-Type: application/ssml+xml\r\n\r\n" + ssml
 	err := conn.WriteMessage(websocket.TextMessage, []byte(msg))
 	if err != nil {
@@ -108,7 +108,7 @@ func GetAudio(ssml, outputForamt string) ([]byte, error) {
 	//处理服务器返回内容
 	onNextReader = func(c *websocket.Conn, msgType int, body []byte, errMsg error) bool {
 		if msgType == -1 && body == nil && errMsg != nil { //已经断开链接
-			log.Warnln("服务器已断开WS连接", errMsg)
+			log.Infoln("服务器已关闭WebSocket连接", errMsg)
 			if wg != nil {
 				err = errMsg
 				wg.Done() //切回主协程 在接收音频、消息错误时调用
@@ -132,7 +132,7 @@ func GetAudio(ssml, outputForamt string) ([]byte, error) {
 	if err != nil {
 		return nil, fmt.Errorf("发送SSML消息失败: %s", err)
 	}
-	log.Debugln("接收 消息/音频...")
+	log.Infoln("接收 消息/音频...")
 	wg.Wait()
 	wg = nil
 

@@ -13,7 +13,6 @@ var port = flag.Int64("port", 1233, "自定义监听端口")
 func main() {
 	flag.Parse()
 	azure.SetWssUrl(*azureHost)
-	log.SetLevel(log.DebugLevel)
 	log.SetFormatter(&logformat.Formatter{HideKeys: true,
 		TimestampFormat: "01-02|15:04:05",
 	})
