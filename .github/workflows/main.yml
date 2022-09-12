@@ -1,6 +1,11 @@
 name: CI
 
-on: [push, pull_request]
+on:
+  push:
+    branches:
+      - master
+    paths:
+      - 'CHANGELOG.md'
 
 env:
   BINARY_PREFIX: "tts-server-go_"
@@ -14,23 +19,24 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        # build and publish in parallel: linux/386, linux/amd64, windows/386, windows/amd64, darwin/amd64, darwin/arm64
+        build and publish in parallel: linux/386, linux/amd64, windows/386, windows/amd64, darwin/amd64, darwin/arm64
         goos: [linux, windows, darwin, android]
         goarch: ["386", amd64, arm, arm64]
         exclude:
-          - goos: darwin
-            goarch: arm
-          - goos: darwin
-            goarch: "386"
-          - goos: windows
-            goarch: arm64
+         - goos: darwin
+           goarch: arm
+         - goos: darwin
+           goarch: "386"
+         - goos: windows
+           goarch: arm64
+
       fail-fast: true
     steps:
       - uses: actions/checkout@v2
       - name: Setup Go environment
         uses: actions/setup-go@v2.1.3
         with:
-          go-version: 1.16
+          go-version: 1.19.1
       - name: Cache downloaded module
         uses: actions/cache@v2
         with:
@@ -47,7 +53,7 @@ jobs:
           if [ $GOOS == "windows" ]; then export BINARY_SUFFIX="$BINARY_SUFFIX.exe"; fi
           if [ "$GOOS" == "android" ]; then declare -A goarch2cc=( ["arm64"]="aarch64-linux-android32-clang" ["arm"]="armv7a-linux-androideabi32-clang" ["amd64"]="x86_64-linux-android32-clang" ["386"]="i686-linux-android32-clang"); export CC="$ANDROID_NDK_LATEST_HOME/toolchains/llvm/prebuilt/linux-x86_64/bin/${goarch2cc[$GOARCH]}"; fi
           if $IS_PR ; then echo $PR_PROMPT; fi
-          export BINARY_NAME="$BINARY_PREFIX$GOOS_$GOARCH$BINARY_SUFFIX"
+          export BINARY_NAME="$BINARY_PREFIX${GOOS}_$GOARCH$BINARY_SUFFIX"
           export CGO_ENABLED=$( [ "$GOOS" == "android" ] && echo 1 || echo 0 )
           go build -o "output/$BINARY_NAME" -trimpath -ldflags "$LD_FLAGS" .
       - name: Upload artifact
@@ -56,3 +62,34 @@ jobs:
         with:
           name: ${{ matrix.goos }}_${{ matrix.goarch }}
           path: output/
+  release:
+    needs: build
+    runs-on: ubuntu-latest
+    name: Download artifact and Release
+    steps:
+      - uses: actions/checkout@v2
+
+      - uses: actions/download-artifact@v3
+        with:
+          path: artifacts
+
+      - name: Copy artifacts to releases
+        run: |
+          mkdir releases && cp ./artifacts/*/* ./releases
+          tree
+
+      - name: Get CHANGELOG(TAG)
+        run: |
+          echo "tts_tag=$(sed -n '1p' CHANGELOG.md)" >> $GITHUB_ENV
+          sed -i '1d' CHANGELOG.md #delete first line
+
+      - uses: softprops/action-gh-release@v0.1.14
+        with:
+          name: ${{ env.tts_tag }}
+          tag_name: ${{ env.tts_tag }}
+          body_path: ${{ github.workspace }}/CHANGELOG.md
+          draft: false
+          prerelease: false
+          files: ${{ github.workspace }}/releases/*
+        env:
+          GITHUB_TOKEN: ${{ secrets.TOKEN }}
