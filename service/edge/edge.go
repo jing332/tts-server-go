@@ -51,9 +51,16 @@ func wssConn() (err error) {
 	return nil
 }
 
+// CloseConn 强制关闭连接
+func CloseConn() {
+	if conn != nil { //关闭底层net连接
+		conn.Close()
+		conn = nil
+	}
+}
+
 // 发送配置消息，其中包括音频格式
 func sendPrefixInfo(outputFormat string) error {
-	log.Debugln("发送配置消息...")
 	cfgMsg := "X-Timestamp:" + tts_server_go.GetISOTime() + "\r\nContent-Type:application/json; charset=utf-8\r\n" + "Path:speech.config\r\n\r\n" +
 		`{"context":{"synthesis":{"audio":{"metadataoptions":{"sentenceBoundaryEnabled":"false","wordBoundaryEnabled":"true"},"outputFormat":"` + outputFormat + `"}}}}`
 
