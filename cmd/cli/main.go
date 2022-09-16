@@ -17,5 +17,11 @@ func main() {
 	log.SetFormatter(&logformat.Formatter{HideKeys: true,
 		TimestampFormat: "01-02|15:04:05",
 	})
-	service.StartServer(*port)
+
+	server := new(service.GracefulServer)
+	server.HandleFunc()
+	err := server.ListenAndServe(*port)
+	if err != nil {
+		log.Fatal(err)
+	}
 }
