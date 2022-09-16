@@ -4,6 +4,7 @@ import (
 	"flag"
 	logformat "github.com/antonfisher/nested-logrus-formatter"
 	log "github.com/sirupsen/logrus"
+	"tts-server-go/service"
 	"tts-server-go/service/azure"
 )
 
@@ -16,5 +17,5 @@ func main() {
 	log.SetFormatter(&logformat.Formatter{HideKeys: true,
 		TimestampFormat: "01-02|15:04:05",
 	})
-	StartServer(*port)
+	service.StartServer(*port)
 }

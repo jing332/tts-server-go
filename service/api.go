@@ -1,4 +1,4 @@
-package main
+package service
 
 import (
 	log "github.com/sirupsen/logrus"
