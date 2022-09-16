@@ -3,14 +3,14 @@ package service
 import (
 	"context"
 	"fmt"
+	"github.com/jing332/tts-server-go/service/azure"
+	"github.com/jing332/tts-server-go/service/edge"
 	log "github.com/sirupsen/logrus"
 	"io"
 	"net/http"
 	"strconv"
 	"sync"
 	"time"
-	"tts-server-go/service/azure"
-	"tts-server-go/service/edge"
 )
 
 type GracefulServer struct {

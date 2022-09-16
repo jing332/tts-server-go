@@ -4,11 +4,11 @@ import (
 	"fmt"
 	"github.com/asters1/tools"
 	"github.com/gorilla/websocket"
+	"github.com/jing332/tts-server-go"
 	log "github.com/sirupsen/logrus"
 	"strings"
 	"sync"
 	"time"
-	"tts-server-go"
 )
 
 var wssUrl = `wss://speech.platform.bing.com/consumer/speech/synthesize/readaloud/edge/v1?TrustedClientToken=6A5AA1D4EAFF4E9FB37E23D68491D6F4&ConnectionId=`

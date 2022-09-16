@@ -3,9 +3,9 @@ package main
 import (
 	"flag"
 	logformat "github.com/antonfisher/nested-logrus-formatter"
+	"github.com/jing332/tts-server-go/service"
+	"github.com/jing332/tts-server-go/service/azure"
 	log "github.com/sirupsen/logrus"
-	"tts-server-go/service"
-	"tts-server-go/service/azure"
 )
 
 var azureHost = flag.String("ah", "", "自定义域名，用来加速微软服务器")

@@ -4,11 +4,11 @@ import (
 	"fmt"
 	"github.com/asters1/tools"
 	"github.com/gorilla/websocket"
+	tts_server_go "github.com/jing332/tts-server-go"
 	log "github.com/sirupsen/logrus"
 	"strings"
 	"sync"
 	"time"
-	tts_server_go "tts-server-go"
 )
 
 var wssUrl = `wss://eastus.api.speech.microsoft.com/cognitiveservices/websocket/v1?TricType=AzureDemo&Authorization=bearer%20undefined&X-ConnectionId=`
