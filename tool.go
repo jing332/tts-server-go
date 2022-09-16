@@ -1,4 +1,4 @@
-package main
+package tts_server_go
 
 import "time"
 

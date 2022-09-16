@@ -8,7 +8,7 @@ import (
 	"strings"
 	"sync"
 	"time"
-	"tts-server-go/service"
+	"tts-server-go"
 )
 
 var wssUrl = `wss://speech.platform.bing.com/consumer/speech/synthesize/readaloud/edge/v1?TrustedClientToken=6A5AA1D4EAFF4E9FB37E23D68491D6F4&ConnectionId=`
@@ -54,7 +54,7 @@ func wssConn() (err error) {
 // 发送配置消息，其中包括音频格式
 func sendPrefixInfo(outputFormat string) error {
 	log.Debugln("发送配置消息...")
-	cfgMsg := "X-Timestamp:" + service.GetISOTime() + "\r\nContent-Type:application/json; charset=utf-8\r\n" + "Path:speech.config\r\n\r\n" +
+	cfgMsg := "X-Timestamp:" + tts_server_go.GetISOTime() + "\r\nContent-Type:application/json; charset=utf-8\r\n" + "Path:speech.config\r\n\r\n" +
 		`{"context":{"synthesis":{"audio":{"metadataoptions":{"sentenceBoundaryEnabled":"false","wordBoundaryEnabled":"true"},"outputFormat":"` + outputFormat + `"}}}}`
 
 	err := conn.WriteMessage(websocket.TextMessage, []byte(cfgMsg))
@@ -68,7 +68,7 @@ func sendPrefixInfo(outputFormat string) error {
 // 发送SSML消息，其中包括要朗读的文本
 func sendSsmlMsg(ssml string) error {
 	log.Infoln("发送SSML:", ssml)
-	msg := "Path: ssml\r\nX-RequestId: " + tools.GetUUID() + "\r\nX-Timestamp: " + service.GetISOTime() + "\r\nContent-Type: application/ssml+xml\r\n\r\n" + ssml
+	msg := "Path: ssml\r\nX-RequestId: " + tools.GetUUID() + "\r\nX-Timestamp: " + tts_server_go.GetISOTime() + "\r\nContent-Type: application/ssml+xml\r\n\r\n" + ssml
 	err := conn.WriteMessage(websocket.TextMessage, []byte(msg))
 	if err != nil {
 		return fmt.Errorf("发送SSML失败: %s", err)

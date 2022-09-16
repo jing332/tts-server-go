@@ -8,7 +8,7 @@ import (
 	"strings"
 	"sync"
 	"time"
-	"tts-server-go/service"
+	tts_server_go "tts-server-go"
 )
 
 var wssUrl = `wss://eastus.api.speech.microsoft.com/cognitiveservices/websocket/v1?TricType=AzureDemo&Authorization=bearer%20undefined&X-ConnectionId=`
@@ -61,9 +61,9 @@ func wssConn() (err error) {
 // 发送配置消息，其中包括音频格式
 func sendPrefixInfo(outputFormat string) error {
 	uuid := tools.GetUUID()
-	m1 := "Path: speech.config\r\nX-RequestId: " + uuid + "\r\nX-Timestamp: " + service.GetISOTime() +
+	m1 := "Path: speech.config\r\nX-RequestId: " + uuid + "\r\nX-Timestamp: " + tts_server_go.GetISOTime() +
 		"\r\nContent-Type: application/json\r\n\r\n{\"context\":{\"system\":{\"name\":\"SpeechSDK\",\"version\":\"1.19.0\",\"build\":\"JavaScript\",\"lang\":\"JavaScript\",\"os\":{\"platform\":\"Browser/Linux x86_64\",\"name\":\"Mozilla/5.0 (X11; Linux x86_64; rv:78.0) Gecko/20100101 Firefox/78.0\",\"version\":\"5.0 (X11)\"}}}}"
-	m2 := "Path: synthesis.context\r\nX-RequestId: " + uuid + "\r\nX-Timestamp: " + service.GetISOTime() +
+	m2 := "Path: synthesis.context\r\nX-RequestId: " + uuid + "\r\nX-Timestamp: " + tts_server_go.GetISOTime() +
 		"\r\nContent-Type: application/json\r\n\r\n{\"synthesis\":{\"audio\":{\"metadataOptions\":{\"sentenceBoundaryEnabled\":false,\"wordBoundaryEnabled\":false},\"outputFormat\":\"" + outputFormat + "\"}}}"
 	err := conn.WriteMessage(websocket.TextMessage, []byte(m1))
 	if err != nil {
@@ -80,7 +80,7 @@ func sendPrefixInfo(outputFormat string) error {
 // 发送SSML消息，其中包括要朗读的文本
 func sendSsmlMsg(ssml string) error {
 	log.Infoln("发送SSML:", ssml)
-	msg := "Path: ssml\r\nX-RequestId: " + tools.GetUUID() + "\r\nX-Timestamp: " + service.GetISOTime() + "\r\nContent-Type: application/ssml+xml\r\n\r\n" + ssml
+	msg := "Path: ssml\r\nX-RequestId: " + tools.GetUUID() + "\r\nX-Timestamp: " + tts_server_go.GetISOTime() + "\r\nContent-Type: application/ssml+xml\r\n\r\n" + ssml
 	err := conn.WriteMessage(websocket.TextMessage, []byte(msg))
 	if err != nil {
 		return fmt.Errorf("发送SSML失败: %s", err)
