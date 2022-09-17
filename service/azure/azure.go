@@ -96,7 +96,7 @@ func sendSsmlMsg(ssml string) error {
 	return nil
 }
 
-func GetAudio(ssml, outputForamt string) ([]byte, error) {
+func GetAudio(ssml, outputFormat string) ([]byte, error) {
 	startTime := time.Now()
 	if conn == nil { //无现有WebSocket连接
 		err := wssConn() //新建WebSocket连接
@@ -105,7 +105,7 @@ func GetAudio(ssml, outputForamt string) ([]byte, error) {
 		}
 	}
 
-	err := sendPrefixInfo(outputForamt)
+	err := sendPrefixInfo(outputFormat)
 	if err != nil {
 		return nil, fmt.Errorf("发送Prefix消息失败: %s", err)
 	}

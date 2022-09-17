@@ -11,6 +11,7 @@ import (
 	"io"
 	"net/http"
 	"strconv"
+	"strings"
 	"sync"
 	"time"
 )
@@ -79,8 +80,18 @@ func (s *GracefulServer) Shutdown(timeout time.Duration) error {
 //go:embed public/index.html
 var indexHtml string
 
+//go:embed public/azure.html
+var azureHtml string
+
 func (s *GracefulServer) webAPIHandler(w http.ResponseWriter, r *http.Request) {
-	w.Write([]byte(indexHtml))
+	if r.URL.Path == "/azure.html" {
+		w.Write([]byte(azureHtml))
+	} else if r.URL.Path == "/index.html" || r.URL.Path == "/" {
+		w.Write([]byte(indexHtml))
+	} else {
+		w.WriteHeader(http.StatusNotFound)
+	}
+
 }
 
 func sendErrorMsg(w http.ResponseWriter, msg string) error {
@@ -126,8 +137,7 @@ func (s *GracefulServer) edgeAPIHandler(w http.ResponseWriter, r *http.Request) 
 func (s *GracefulServer) azureAPIHandler(w http.ResponseWriter, r *http.Request) {
 	s.azureRwLock.Lock()
 	defer s.azureRwLock.Unlock()
-	format := `webm-24khz-16bit-mono-opus`
-	ctxType := `audio/webm; codec=opus`
+	format := r.Header.Get("Format")
 
 	defer r.Body.Close()
 	ssml, _ := io.ReadAll(r.Body)
@@ -140,7 +150,7 @@ func (s *GracefulServer) azureAPIHandler(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	w.Header().Set("Content-Type", ctxType)
+	w.Header().Set("Content-Type", formatContentType(format))
 	w.Header().Set("Connection", "keep-alive")
 	w.Header().Set("Keep-Alive", "timeout=5")
 	w.Header().Set("Content-Length", strconv.FormatInt(int64(len(b)), 10))
@@ -157,7 +167,11 @@ func (s *GracefulServer) legadoAPIHandler(w http.ResponseWriter, r *http.Request
 	apiUrl := params.Get("api")
 	name := params.Get("name")
 	voiceName := params.Get("voiceName")
-	jsonStr, err := genLegodoJson(apiUrl, name, voiceName)
+	styleName := params.Get("styleName")
+	styleDegree := params.Get("styleDegree")
+	voiceFormat := params.Get("voiceFormat")
+
+	jsonStr, err := genLegodoJson(apiUrl, name, voiceName, styleName, styleDegree, voiceFormat)
 	if err != nil {
 		w.WriteHeader(http.StatusBadRequest)
 		w.Write([]byte(err.Error()))
@@ -166,11 +180,19 @@ func (s *GracefulServer) legadoAPIHandler(w http.ResponseWriter, r *http.Request
 	w.Write(jsonStr)
 }
 
-func genLegodoJson(api, name, voiceName string) ([]byte, error) {
+func genLegodoJson(api, name, voiceName, styleName, styleDegree, format string) ([]byte, error) {
 	t := time.Now().UnixNano() / 1e6 //毫秒时间戳
-	url := api + ` ,{"method":"POST","body":"<speak xmlns=\"http://www.w3.org/2001/10/synthesis\" xmlns:mstts=\"http://www.w3.org/2001/mstts\" xmlns:emo=\"http://www.w3.org/2009/10/emotionml\" version=\"1.0\" xml:lang=\"en-US\"><voice name=\"` +
-		voiceName + `\"><prosody rate=\"{{(speakSpeed -10) * 2}}%\" pitch=\"+0Hz\">{{String(speakText).replace(/&/g, '&amp;').replace(/\"/g, '&quot;').replace(/'/g, '&apos;').replace(/</g, '&lt;').replace(/>/g, '&gt;')}}</prosody></voice></speak>"}`
-	legadoJson := &LegadoJson{Name: name, URL: url, ID: t, LastUpdateTime: t, ContentType: "audio/webm; codec=opus"}
+	var url string
+	if styleName == "" {
+		url = api + ` ,{"method":"POST","body":"<speak xmlns=\"http://www.w3.org/2001/10/synthesis\" xmlns:mstts=\"http://www.w3.org/2001/mstts\" xmlns:emo=\"http://www.w3.org/2009/10/emotionml\" version=\"1.0\" xml:lang=\"en-US\"><voice name=\"` +
+			voiceName + `\"><prosody rate=\"{{(speakSpeed -10) * 2}}%\" pitch=\"+0Hz\">{{String(speakText).replace(/&/g, '&amp;').replace(/\"/g, '&quot;').replace(/'/g, '&apos;').replace(/</g, '&lt;').replace(/>/g, '&gt;')}}</prosody></voice></speak>"}`
+	} else {
+		url = api + ` ,{"method":"POST","body":"<speak xmlns=\"http://www.w3.org/2001/10/synthesis\" xmlns:mstts=\"http://www.w3.org/2001/mstts\" xmlns:emo=\"http://www.w3.org/2009/10/emotionml\" version=\"1.0\" xml:lang=\"en-US\"><voice name=\"` +
+			voiceName + `\"><mstts:express-as style=\"` + styleName + `\" styledegree=\" ` + styleDegree + `\"><prosody rate=\"{{(speakSpeed -10) * 2}}%\" pitch=\"+0Hz\">{{String(speakText).replace(/&/g, '&amp;').replace(/\"/g, '&quot;').replace(/'/g, '&apos;').replace(/</g, '&lt;').replace(/>/g, '&gt;')}}</prosody> </mstts:express-as></voice></speak>"}`
+	}
+
+	head := `{"Content-Type":"text/plain","Authorization":"Bearer ","Format":"` + format + `"}`
+	legadoJson := &LegadoJson{Name: name, URL: url, ID: t, LastUpdateTime: t, ContentType: formatContentType(format), Header: head}
 
 	body, err := json.Marshal(legadoJson)
 	if err != nil {
@@ -180,16 +202,38 @@ func genLegodoJson(api, name, voiceName string) ([]byte, error) {
 	return body, nil
 }
 
+func formatContentType(format string) string {
+	t := strings.Split(format, "-")[0]
+	switch t {
+	case "audio":
+		return "audio/mpeg"
+	case "webm":
+		return "audio/webm; codec=opus"
+	case "ogg":
+		return "audio/ogg; codecs=opus; rate=16000"
+	case "riff":
+		return "audio/x-wav"
+	case "raw":
+		if strings.HasSuffix(format, "truesilk") {
+			return "audio/SILK"
+		} else {
+			return "audio/basic"
+		}
+	}
+	return ""
+}
+
 type LegadoJson struct {
-	//ConcurrentRate   string `json:"concurrentRate"`
-	ContentType string `json:"contentType"`
-	//EnabledCookieJar bool   `json:"enabledCookieJar"`
-	//Header           string `json:"header"`
+	ContentType    string `json:"contentType"`
+	Header         string `json:"header"`
 	ID             int64  `json:"id"`
 	LastUpdateTime int64  `json:"lastUpdateTime"`
-	LoginCheckJs   string `json:"loginCheckJs"`
-	LoginUI        string `json:"loginUi"`
-	LoginURL       string `json:"loginUrl"`
 	Name           string `json:"name"`
 	URL            string `json:"url"`
+	//ConcurrentRate   string `json:"concurrentRate"`
+	//EnabledCookieJar bool   `json:"enabledCookieJar"`
+	//LoginCheckJs   string `json:"loginCheckJs"`
+	//LoginUI        string `json:"loginUi"`
+	//LoginURL       string `json:"loginUrl"`
+
 }
