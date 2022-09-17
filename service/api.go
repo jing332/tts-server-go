@@ -2,6 +2,8 @@ package service
 
 import (
 	"context"
+	_ "embed"
+	"encoding/json"
 	"fmt"
 	"github.com/jing332/tts-server-go/service/azure"
 	"github.com/jing332/tts-server-go/service/edge"
@@ -27,8 +29,10 @@ func (s *GracefulServer) HandleFunc() {
 	if s.serveMux == nil {
 		s.serveMux = &http.ServeMux{}
 	}
+	s.serveMux.HandleFunc("/", s.webAPIHandler)
 	s.serveMux.HandleFunc("/api/azure", s.azureAPIHandler)
 	s.serveMux.HandleFunc("/api/ra", s.edgeAPIHandler)
+	s.serveMux.HandleFunc("/api/legado", s.legadoAPIHandler)
 }
 
 // ListenAndServe 监听服务
@@ -70,6 +74,13 @@ func (s *GracefulServer) Shutdown(timeout time.Duration) error {
 	s.shutdownLoad = nil
 
 	return nil
+}
+
+//go:embed public/index.html
+var indexHtml string
+
+func (s *GracefulServer) webAPIHandler(w http.ResponseWriter, r *http.Request) {
+	w.Write([]byte(indexHtml))
 }
 
 func sendErrorMsg(w http.ResponseWriter, msg string) error {
@@ -139,4 +150,46 @@ func (s *GracefulServer) azureAPIHandler(w http.ResponseWriter, r *http.Request)
 		log.Warnln("写入音频数据失败:", err)
 		return
 	}
+}
+
+func (s *GracefulServer) legadoAPIHandler(w http.ResponseWriter, r *http.Request) {
+	params := r.URL.Query()
+	apiUrl := params.Get("api")
+	name := params.Get("name")
+	voiceName := params.Get("voiceName")
+	jsonStr, err := genLegodoJson(apiUrl, name, voiceName)
+	if err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		w.Write([]byte(err.Error()))
+	}
+
+	w.Write(jsonStr)
+}
+
+func genLegodoJson(api, name, voiceName string) ([]byte, error) {
+	t := time.Now().UnixNano() / 1e6 //毫秒时间戳
+	url := api + ` ,{"method":"POST","body":"<speak xmlns=\"http://www.w3.org/2001/10/synthesis\" xmlns:mstts=\"http://www.w3.org/2001/mstts\" xmlns:emo=\"http://www.w3.org/2009/10/emotionml\" version=\"1.0\" xml:lang=\"en-US\"><voice name=\"` +
+		voiceName + `\"><prosody rate=\"{{(speakSpeed -10) * 2}}%\" pitch=\"+0Hz\">{{String(speakText).replace(/&/g, '&amp;').replace(/\"/g, '&quot;').replace(/'/g, '&apos;').replace(/</g, '&lt;').replace(/>/g, '&gt;')}}</prosody></voice></speak>"}`
+	legadoJson := &LegadoJson{Name: name, URL: url, ID: t, LastUpdateTime: t, ContentType: "audio/webm; codec=opus"}
+
+	body, err := json.Marshal(legadoJson)
+	if err != nil {
+		return nil, err
+	}
+
+	return body, nil
+}
+
+type LegadoJson struct {
+	//ConcurrentRate   string `json:"concurrentRate"`
+	ContentType string `json:"contentType"`
+	//EnabledCookieJar bool   `json:"enabledCookieJar"`
+	//Header           string `json:"header"`
+	ID             int64  `json:"id"`
+	LastUpdateTime int64  `json:"lastUpdateTime"`
+	LoginCheckJs   string `json:"loginCheckJs"`
+	LoginUI        string `json:"loginUi"`
+	LoginURL       string `json:"loginUrl"`
+	Name           string `json:"name"`
+	URL            string `json:"url"`
 }
