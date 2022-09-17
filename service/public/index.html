@@ -50,9 +50,11 @@
                 <label for="voiceFormat" class="form-label">音频格式：</label>
                 <select name="voiceFormat" class="form-select">
                     <option value="webm-24khz-16bit-mono-opus" selected>webm-24khz-16bit-mono-opus</option>
+                    <option value="audio-24khz-48kbitrate-mono-mp3">audio-24khz-48kbitrate-mono-mp3</option>
+                    <option value="audio-24khz-96kbitrate-mono-mp3">audio-24khz-96kbitrate-mono-mp3</option>
                 </select>
                 <div class="form-text">
-                    <p>Edge大声朗读接口仅支持 webm-24khz-16bit-mono-opus</p>
+                    <p>Edge大声朗读接口目前仅支持这些</p>
                 </div>
             </div>
 
@@ -162,13 +164,13 @@
         let voiceName = document.getElementsByName('voiceName')[0].value;
         let previewText = document.getElementsByName('previewText')[0].value;
         let ssml = createSSML(previewText, voiceName)
-        // let voiceFormat = document.getElementsByName('voiceFormat')[0].value;
+        let voiceFormat = document.getElementsByName('voiceFormat')[0].value;
         // let token = document.getElementsByName('token')[0].value;
         // if (token) {
         //     headers['Authorization'] = 'Bearer ' + token;
         // }
 
-        // headers['Format'] = voiceFormat;
+        headers['Format'] = voiceFormat;
 
         let button = document.getElementById('previewButton');
         button.disabled = true;
@@ -203,13 +205,13 @@
     function createLegadoUrl() {
         let name = document.getElementsByName('name')[0].value;
         let voiceName = document.getElementsByName('voiceName')[0].value;
-        // let voiceFormat = document.getElementsByName('voiceFormat')[0].value;
+        let voiceFormat = document.getElementsByName('voiceFormat')[0].value;
         // let token = document.getElementsByName('token')[0].value;
         let previewText = document.getElementsByName('previewText')[0].value;
         let url = window.location.protocol + '//' + window.location.host + '/api/legado?api=' + encodeURI(window.location.protocol + '//' + window.location.host + '/api/ra')
             + '&name=' + encodeURI(name)
             + '&voiceName=' + voiceName
-        // + '&voiceFormat=' + voiceFormat
+        + '&voiceFormat=' + voiceFormat
         // + '&token=' + token;
         let svg = new QRCode(url).svg();
         let modal = new bootstrap.Modal(document.getElementById('legadoUrlModal'))

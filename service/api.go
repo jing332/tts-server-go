@@ -108,12 +108,9 @@ func sendErrorMsg(w http.ResponseWriter, msg string) error {
 func (s *GracefulServer) edgeAPIHandler(w http.ResponseWriter, r *http.Request) {
 	s.edgeRwLock.Lock()
 	defer s.edgeRwLock.Unlock()
-	format := `webm-24khz-16bit-mono-opus`
-	ctxType := `audio/webm; codec=opus`
-
 	defer r.Body.Close()
 	ssml, _ := io.ReadAll(r.Body)
-
+	format := r.Header.Get("Format")
 	b, err := edge.GetAudioForRetry(string(ssml), format, 3)
 	if err != nil {
 		if e := sendErrorMsg(w, err.Error()); e != nil {
@@ -121,7 +118,7 @@ func (s *GracefulServer) edgeAPIHandler(w http.ResponseWriter, r *http.Request) 
 		}
 		return
 	}
-	w.Header().Set("Content-Type", ctxType)
+	w.Header().Set("Content-Type", formatContentType(format))
 	w.Header().Set("Connection", "keep-alive")
 	w.Header().Set("Keep-Alive", "timeout=5")
 	w.Header().Set("Content-Length", strconv.FormatInt(int64(len(b)), 10))
