@@ -44,13 +44,14 @@ func (s *GracefulServer) ListenAndServe(port int64) error {
 		MaxHeaderBytes: 1 << 20,
 		Handler:        s.serveMux,
 	}
-	//log.Infoln("服务已启动, 监听端口为", s.Server.Addr)
+	log.Infoln("服务已启动, 监听端口为", s.Server.Addr)
 	err := s.Server.ListenAndServe()
 	if err == http.ErrServerClosed { /*说明调用Shutdown关闭*/
 		err = nil
 	} else if err != nil {
 		return err
 	}
+
 	<-s.shutdownLoad /*等待,直到服务关闭*/
 
 	return nil
@@ -62,9 +63,11 @@ func (s *GracefulServer) Shutdown(timeout time.Duration) error {
 	defer cancel()
 	err := s.Server.Shutdown(ctx)
 	if err != nil {
-		return fmt.Errorf("shutting down: %d", err)
+		return fmt.Errorf("shutdown失败: %d", err)
 	}
+
 	close(s.shutdownLoad)
+	s.shutdownLoad = nil
 
 	return nil
 }
