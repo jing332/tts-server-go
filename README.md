@@ -5,16 +5,12 @@
 # 下载
 请从 [Release](https://github.com/jing332/tts-server-go/releases) 下载最新代码构建程序.。
 
-https://jing332.lanzouw.com/b09hnlbob
-密码:1234 (不一定同步更新)
-
 # 使用方法
 直接运行，默认监听1233端口。
 
-然后使用阅读APP网络导入此链接： 
-https://raw.fastgit.org/jing332/tts-server-go/master/Legado_tts_localhost_1233.json
+然后浏览器 `http://localhost:1233` 打开网页，选好配置导入阅读后即可朗读。
 
-即可朗读。
+~~使用阅读APP网络导入此链接：https://raw.fastgit.org/jing332/tts-server-go/master/Legado_tts_localhost_1233.json~~
 
 # 提示
 
