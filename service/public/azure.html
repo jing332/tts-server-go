@@ -35,7 +35,7 @@
         <div class="row">
             <div class="col">
                 <label for="name" class="form-label">配置名称：</label>
-                <input name="name" type="text" class="form-control" value="微软TTS-1233"/>
+                <input name="name" type="text" class="form-control" value="微软TTS"/>
                 <div class="form-text">在阅读APP中显示的名称。</div>
             </div>
         </div>
@@ -50,7 +50,7 @@
         <div class="row">
             <div class="col">
                 <label for="styleName" class="form-label">风格：</label>
-                <select name="styleName" class="form-select">
+                <select name="styleName" class="form-select" onchange="updateName()">
                     <option value="general">普通</option>
                 </select>
                 <div class="form-text">指定讲话风格。 说话风格特定于语音。</div>
@@ -64,7 +64,7 @@
             </div>
             <div class="col">
                 <label for="roleName" class="form-label">角色：</label>
-                <select name="roleName" class="form-select" disabled="disabled">
+                <select name="roleName" class="form-select" disabled="disabled" onchange="updateName()">
                     <option value="default">默认</option>
                 </select>
                 <div class="form-text">指定角色扮演。如云希的旁白/小男孩。</div>
@@ -261,10 +261,24 @@
         updateConfigName();
     }
 
+    function getSelectedText(elementName) {
+        let obj = document.getElementsByName(elementName)[0]
+        let index = obj.selectedIndex; // 选中索引
+        let text = obj.options[index].text; // 选中文本
+        return text
+    }
+
+    function  updateName() {
+        let voiceName = document.getElementsByName('voiceName')[0].value;
+        let styleName = getSelectedText("styleName")
+        let roleName = getSelectedText("roleName")
+        let voice = voices[voiceName];
+        document.getElementsByName('name')[0].value = '微软TTS（' + voice['LocalName'] + '-' + styleName + '-' + roleName +  '）';
+    }
+
     function updateConfigName() {
         let voiceName = document.getElementsByName('voiceName')[0].value;
         let voice = voices[voiceName];
-        document.getElementsByName('name')[0].value = '微软TTS-1233（' + voice['LocalName'] + '）';
         let styleElement = document.getElementsByName('styleName')[0]
         styleElement.innerHTML = '';
         let option = document.createElement('option');
@@ -295,7 +309,7 @@
         } else {
             roleElement.disabled = true
         }
-
+        updateName()
     }
 
     function createSSML(text, voiceName, styleName, styleDegree, roleName) {
