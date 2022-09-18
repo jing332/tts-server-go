@@ -26,7 +26,8 @@
         <div class="col">
             <div class="alert alert-warning" role="alert">
                 Azure 版本。此版本使用了<a href="https://azure.microsoft.com/zh-cn/services/cognitive-services/text-to-speech/"
-                                  target="_blank">Azure 演示页面</a>的接口。有问题请提 <a href="https://github.com/wxxxcxx/ms-ra-forwarder/issues">issue</a>。
+                                  target="_blank">Azure 演示页面</a>的接口。有问题请提 <a
+                    href="https://github.com/wxxxcxx/ms-ra-forwarder/issues">issue</a>。
             </div>
         </div>
     </div>
@@ -34,7 +35,7 @@
         <div class="row">
             <div class="col">
                 <label for="name" class="form-label">配置名称：</label>
-                <input name="name" type="text" class="form-control" value="微软TTS-1233" />
+                <input name="name" type="text" class="form-control" value="微软TTS-1233"/>
                 <div class="form-text">在阅读APP中显示的名称。</div>
             </div>
         </div>
@@ -50,7 +51,7 @@
             <div class="col">
                 <label for="styleName" class="form-label">风格：</label>
                 <select name="styleName" class="form-select">
-                    <option value="general">general</option>
+                    <option value="general">普通</option>
                 </select>
                 <div class="form-text">指定讲话风格。 说话风格特定于语音。</div>
             </div>
@@ -58,7 +59,15 @@
                 <label for="styleDegree" class="form-label">风格强度：</label>
                 <input name="styleDegree" class="form-control" type="number" min="0.1" max="2.0" step="0.1" value="1.0">
                 <div class="form-text">指定说话风格的强度。 接受的值：0.01 到 2（含边界值）。 默认值为 1，表示预定义的风格强度。 最小单位为 0.01，表示略倾向于目标风格。 值为 2
-                    表示是默认风格强度的两倍。</div>
+                    表示是默认风格强度的两倍。
+                </div>
+            </div>
+            <div class="col">
+                <label for="roleName" class="form-label">角色：</label>
+                <select name="roleName" class="form-select" disabled="disabled">
+                    <option value="default">默认</option>
+                </select>
+                <div class="form-text">指定角色扮演。如云希的旁白/小男孩。</div>
             </div>
         </div>
         <div class="row">
@@ -96,7 +105,7 @@
                 </div>
             </div>
 
-            <div class="row", hidden="hidden">
+            <div class="row" , hidden="hidden">
                 <div>
                     <label for="token" class="form-label">凭据（TOKEN）：</label>
                     <input name="token" class="form-control" type="text" value="">
@@ -114,7 +123,8 @@
             <div class="row">
                 <div class="col">
                     <button id="previewButton" type="button" class="btn btn-secondary" onclick="preview()">测试</button>
-                    <button type="button" class="btn btn-primary" onclick='createLegadoUrl()'>生成阅读（legado）语音引擎链接</button>
+                    <button type="button" class="btn btn-primary" onclick='createLegadoUrl()'>生成阅读（legado）语音引擎链接
+                    </button>
                 </div>
             </div>
     </form>
@@ -163,12 +173,61 @@
             var sussced = document.execCommand("copy")
             if (sussced) {
                 document.getElementById("copyButton").innerText = "已复制到剪贴板"
-            }else {
+            } else {
                 document.getElementById("copyButton").innerText = "复制失败 请手动复制"
             }
         } catch (e) {
             document.getElementById("copyButton").innerText = "复制失败 请手动复制"
         }
+    }
+    //汉化 来自: https://toolb.cn/textspeech
+    let cnLocal = {
+        'general': '普通',
+        'assistant': '助手',
+        'chat': '闲聊',
+        'customerservice': '服侍',
+        'newscast': '新闻播报',
+        'newscast-casual': '新闻播报(冷淡)',
+        'affectionate': '温暖亲切',
+        'angry': '生气',
+        'calm': '平静',
+        'cheerful': '欢快',
+        'excited': '激动',
+        'friendly': '温和',
+        'hopeful': '期待',
+        'shouting': '喊叫',
+        'terrified': '害怕',
+        'unfriendly': '冷漠',
+        'whispering': '耳语',
+        'empathetic': '同情',
+        'newscast-formal': '新闻播报(正式)',
+        'disgruntled': '不满',
+        'fearful': '担心',
+        'gentle': '温合文雅',
+        'lyrical': '热情奔放',
+        'embarrassed': '犹豫',
+        'sad': '悲伤',
+        'serious': '严肃',
+        'depressed': '忧伤',
+        'envious': '嫉妒',
+        'poetry-reading': '诗歌朗诵',
+        //角色(身份):
+        'narration-professional': '讲故事(专业)',
+        'narration-casual': '讲故事(冷淡)',
+        'narration-relaxed': '讲故事(轻松)',
+        'Narration-relaxed': '讲故事(轻松)',
+        'Sports_commentary_excited': '体育解说(激动)',
+        'Sports_commentary': '体育解说',
+        'Advertisement_upbeat': '广告推销(积极)',
+        'YoungAdultFemale': '女性青年',
+        'YoungAdultMale': '男性青年',
+        'OlderAdultFemale': '年长女性',
+        'OlderAdultMale': '年长男性',
+        'SeniorFemale': '高龄女性',
+        'SeniorMale': '高龄男性',
+        'Girl': '小女孩',
+        'Boy': '小男孩',
+        'Narrator': '旁白'
     }
 
     let voices = {};
@@ -210,24 +269,40 @@
         styleElement.innerHTML = '';
         let option = document.createElement('option');
         option.value = 'general';
-        option.innerText = 'general';
+        option.innerText = '普通';
         styleElement.appendChild(option);
         let styleList = voice['StyleList']
         if (styleList) {
             styleList.forEach(style => {
                 let option = document.createElement('option');
                 option.value = style;
-                option.innerText = style;
+                option.innerText = cnLocal[style] || style;
                 styleElement.appendChild(option);
             });
         }
+
+        let roleElement = document.getElementsByName("roleName")[0]
+        let roleList = voice['RolePlayList']
+        roleElement.innerHTML = "<option value=\"default\">默认</option>"
+        if (roleList) {
+            roleElement.disabled = false
+            roleList.forEach(role => {
+                let option = document.createElement('option')
+                option.value = role
+                option.innerText = cnLocal[role] || role
+                roleElement.appendChild(option)
+            })
+        } else {
+            roleElement.disabled = true
+        }
+
     }
 
-    function createSSML(text, voiceName, styleName, styleDegree) {
+    function createSSML(text, voiceName, styleName, styleDegree, roleName) {
         let ssml = `\
         <speak xmlns="http://www.w3.org/2001/10/synthesis" xmlns:mstts="http://www.w3.org/2001/mstts" xmlns:emo="http://www.w3.org/2009/10/emotionml" version="1.0" xml:lang="en-US">\
           <voice name="${voiceName}">\
-            <mstts:express-as style="${styleName}" styledegree="${styleDegree}">\
+            <mstts:express-as style="${styleName}" styledegree="${styleDegree}" role="${roleName}">\
               <prosody rate="0%" pitch="0%">\
                   ${text}\
               </prosody >\
@@ -239,15 +314,16 @@
     }
 
     function preview() {
-        let headers = { 'Content-Type': 'text/plain' };
+        let headers = {'Content-Type': 'text/plain'};
 
         let voiceName = document.getElementsByName('voiceName')[0].value;
         let voiceFormat = document.getElementsByName('voiceFormat')[0].value;
         let styleName = document.getElementsByName('styleName')[0].value;
         let styleDegree = document.getElementsByName('styleDegree')[0].value;
+        let roleName = document.getElementsByName('roleName')[0].value;
         let token = document.getElementsByName('token')[0].value;
         let previewText = document.getElementsByName('previewText')[0].value;
-        let ssml = createSSML(previewText, voiceName, styleName, styleDegree)
+        let ssml = createSSML(previewText, voiceName, styleName, styleDegree, roleName)
         if (token) {
             headers['Authorization'] = 'Bearer ' + token;
         }
@@ -289,14 +365,19 @@
         let voiceName = document.getElementsByName('voiceName')[0].value;
         let styleName = document.getElementsByName('styleName')[0].value;
         let styleDegree = document.getElementsByName('styleDegree')[0].value;
+        let roleName = document.getElementsByName('roleName')[0].value;
         let voiceFormat = document.getElementsByName('voiceFormat')[0].value;
         let token = document.getElementsByName('token')[0].value;
         let previewText = document.getElementsByName('previewText')[0].value;
+        if (roleName == 'default'){
+            roleName = ''
+        }
         let url = window.location.protocol + '//' + window.location.host + '/api/legado?api=' + encodeURI(window.location.protocol + '//' + window.location.host + '/api/azure')
             + '&name=' + encodeURI(name)
             + '&voiceName=' + voiceName
             + '&styleName=' + styleName
             + '&styleDegree=' + styleDegree
+            + '&roleName=' + roleName
             + '&voiceFormat=' + voiceFormat
             + '&token=' + token;
         let svg = new QRCode(url).svg();
