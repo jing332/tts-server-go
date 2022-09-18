@@ -132,6 +132,11 @@
             <div class="modal-body">
                 <div id="legadoUrlQRCode" style="text-align:center">
                 </div>
+                <div style="height:10px"></div>
+                <div style="text-align: center">
+                    <button id="copyButton" class="btn btn-primary" onclick="copy()">一键复制</button>
+                </div>
+                <div style="height:10px"></div>
                 <textarea id="legadoUrl" class="form-control" readonly rows="3" cols="2" value></textarea>
                 <div>
                 </div>
@@ -148,6 +153,24 @@
         crossorigin="anonymous"></script>
 <script src="https://cdn.jsdelivr.net/npm/qrcode-svg@1.1.0/lib/qrcode.min.js"></script>
 <script>
+    function copy() {
+        setTimeout(function () {
+            document.getElementById("copyButton").innerText = "一键复制"
+        }, 3000)
+
+        try {
+            document.getElementById("legadoUrl").select()
+            var sussced = document.execCommand("copy")
+            if (sussced) {
+                document.getElementById("copyButton").innerText = "已复制到剪贴板"
+            }else {
+                document.getElementById("copyButton").innerText = "复制失败 请手动复制"
+            }
+        } catch (e) {
+            document.getElementById("copyButton").innerText = "复制失败 请手动复制"
+        }
+    }
+
     let voices = {};
     fetch('https://eastus.api.speech.microsoft.com/cognitiveservices/voices/list')
         .then(response => {
