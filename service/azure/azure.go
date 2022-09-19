@@ -13,6 +13,7 @@ import (
 
 var wssUrl = `wss://eastus.api.speech.microsoft.com/cognitiveservices/websocket/v1?TricType=AzureDemo&Authorization=bearer%20undefined&X-ConnectionId=`
 var conn *websocket.Conn = nil
+var uuid string
 
 type TNextReaderCallBack func(*websocket.Conn, int, []byte, error) (closed bool)
 
@@ -20,9 +21,9 @@ var onNextReader TNextReaderCallBack
 
 func SetWssUrl(host string) {
 	if host == "" {
-		wssUrl = `wss://eastus.api.speech.microsoft.com/cognitiveservices/websocket/v1?TricType=AzureDemo&Authorization=bearer%20undefined&X-ConnectionId=`
+		wssUrl = `wss://eastus.api.speech.microsoft.com/cognitiveservices/websocket/v1?TrafficType=AzureDemo&Authorization=bearer%20undefined&X-ConnectionId=`
 	} else {
-		wssUrl = "wss://" + host + "/cognitiveservices/websocket/v1?TricType=AzureDemo&Authorization=bearer%20undefined&X-ConnectionId=`"
+		wssUrl = "wss://" + host + "/cognitiveservices/websocket/v1?TrafficType=AzureDemo&Authorization=bearer%20undefined&X-ConnectionId=`"
 		log.Infoln("使用自定义接口地址:", wssUrl)
 	}
 }
@@ -34,11 +35,12 @@ func wssConn() (err error) {
 		HandshakeTimeout:  time.Second * 15,
 	}
 
-	conn, _, err = dl.Dial(wssUrl, tools.GetHeader(
-		`Accept-Encoding:gzip
+	head := tools.GetHeader(
+		`Accept-Encoding:gzip, deflate, br
 		User-Agent:Mozilla/5.0 (Linux; Android 7.1.2; M2012K11AC Build/N6F26Q; wv) AppleWebKit/537.36 (KHTML, like Gecko) Version/4.0 Chrome/81.0.4044.117 Mobile Safari/537.36
-		Origin:https://azure.microsoft.com`,
-	))
+		host:eastus.api.speech.microsoft.com
+		Origin:https://azure.microsoft.com`)
+	conn, _, err = dl.Dial(wssUrl+uuid, head)
 
 	if err != nil {
 		return fmt.Errorf("创建WebScoket连接失败:%s", err)
@@ -68,7 +70,6 @@ func CloseConn() {
 
 // 发送配置消息，其中包括音频格式
 func sendPrefixInfo(outputFormat string) error {
-	uuid := tools.GetUUID()
 	m1 := "Path: speech.config\r\nX-RequestId: " + uuid + "\r\nX-Timestamp: " + tts_server_go.GetISOTime() +
 		"\r\nContent-Type: application/json\r\n\r\n{\"context\":{\"system\":{\"name\":\"SpeechSDK\",\"version\":\"1.19.0\",\"build\":\"JavaScript\",\"lang\":\"JavaScript\",\"os\":{\"platform\":\"Browser/Linux x86_64\",\"name\":\"Mozilla/5.0 (X11; Linux x86_64; rv:78.0) Gecko/20100101 Firefox/78.0\",\"version\":\"5.0 (X11)\"}}}}"
 	m2 := "Path: synthesis.context\r\nX-RequestId: " + uuid + "\r\nX-Timestamp: " + tts_server_go.GetISOTime() +
@@ -88,7 +89,7 @@ func sendPrefixInfo(outputFormat string) error {
 // 发送SSML消息，其中包括要朗读的文本
 func sendSsmlMsg(ssml string) error {
 	log.Infoln("发送SSML:", ssml)
-	msg := "Path: ssml\r\nX-RequestId: " + tools.GetUUID() + "\r\nX-Timestamp: " + tts_server_go.GetISOTime() + "\r\nContent-Type: application/ssml+xml\r\n\r\n" + ssml
+	msg := "Path: ssml\r\nX-RequestId: " + uuid + "\r\nX-Timestamp: " + tts_server_go.GetISOTime() + "\r\nContent-Type: application/ssml+xml\r\n\r\n" + ssml
 	err := conn.WriteMessage(websocket.TextMessage, []byte(msg))
 	if err != nil {
 		return fmt.Errorf("发送SSML失败: %s", err)
@@ -98,6 +99,7 @@ func sendSsmlMsg(ssml string) error {
 
 func GetAudio(ssml, outputFormat string) ([]byte, error) {
 	startTime := time.Now()
+	uuid = tools.GetUUID()
 	if conn == nil { //无现有WebSocket连接
 		err := wssConn() //新建WebSocket连接
 		if err != nil {
