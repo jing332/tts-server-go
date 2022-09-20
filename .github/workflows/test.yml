@@ -1,0 +1,67 @@
+name: Test
+
+on:
+  push:
+    branches:
+      - master
+    paths-ignore:
+    - "README.md"
+    - "CHANGELOG.md"
+  workflow_dispatch: 
+
+env:
+  BINARY_PREFIX: "tts-server-go_"
+  BINARY_SUFFIX: ""
+  PR_PROMPT: "::warning:: Build artifact will not be uploaded due to the workflow is trigged by pull request."
+  LD_FLAGS: "-w -s"
+
+jobs:
+  build:
+    name: Build binary CI
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        goos: [linux, windows, darwin, android]
+        goarch: ["386", amd64, arm, arm64]
+        exclude:
+         - goos: darwin
+           goarch: arm
+         - goos: darwin
+           goarch: "386"
+         - goos: windows
+           goarch: arm64
+
+      fail-fast: true
+    steps:
+      - uses: actions/checkout@v2
+      - name: Setup Go environment
+        uses: actions/setup-go@v2.1.3
+        with:
+          go-version: 1.19.1
+      - name: Cache downloaded module
+        uses: actions/cache@v2
+        with:
+          path: |
+            ~/.cache/go-build
+            ~/go/pkg/mod
+          key: ${{ runner.os }}-go-${{ matrix.goos }}-${{ matrix.goarch }}-${{ hashFiles('**/go.sum') }}
+      - name: Build binary file
+        env:
+          GOOS: ${{ matrix.goos }}
+          GOARCH: ${{ matrix.goarch }}
+          IS_PR: ${{ !!github.head_ref }}
+        run: |
+          if [ $GOOS == "windows" ]; then export BINARY_SUFFIX="$BINARY_SUFFIX.exe"; fi
+          if [ "$GOOS" == "android" ]; then declare -A goarch2cc=( ["arm64"]="aarch64-linux-android32-clang" ["arm"]="armv7a-linux-androideabi32-clang" ["amd64"]="x86_64-linux-android32-clang" ["386"]="i686-linux-android32-clang"); export CC="$ANDROID_NDK_LATEST_HOME/toolchains/llvm/prebuilt/linux-x86_64/bin/${goarch2cc[$GOARCH]}"; fi
+          if $IS_PR ; then echo $PR_PROMPT; fi
+          export BINARY_NAME="$BINARY_PREFIX${GOOS}_$GOARCH$BINARY_SUFFIX"
+          export CGO_ENABLED=$( [ "$GOOS" == "android" ] && echo 1 || echo 0 )
+          cd cmd/cli
+          go build -o "$GITHUB_WORKSPACE/output/$BINARY_NAME" -trimpath -ldflags "$LD_FLAGS" .
+      - name: Upload artifact
+        uses: actions/upload-artifact@v2
+        if: ${{ !github.head_ref }}
+        with:
+          name: ${{ matrix.goos }}_${{ matrix.goarch }}
+          path: output/
+ 
