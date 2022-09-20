@@ -21,8 +21,8 @@ type GracefulServer struct {
 	serveMux     *http.ServeMux
 	shutdownLoad chan struct{}
 
-	edgeRwLock  sync.RWMutex
-	azureRwLock sync.RWMutex
+	edgeRwLock  sync.Mutex
+	azureRwLock sync.Mutex
 }
 
 // HandleFunc 注册
@@ -45,7 +45,7 @@ func (s *GracefulServer) ListenAndServe(port int64) error {
 	s.Server = &http.Server{
 		Addr:           ":" + strconv.FormatInt(port, 10),
 		ReadTimeout:    10 * time.Second,
-		WriteTimeout:   10 * time.Second,
+		WriteTimeout:   30 * time.Second,
 		MaxHeaderBytes: 1 << 20,
 		Handler:        s.serveMux,
 	}
@@ -97,7 +97,6 @@ func (s *GracefulServer) webAPIHandler(w http.ResponseWriter, r *http.Request) {
 func sendErrorMsg(w http.ResponseWriter, msg string) error {
 	log.Warnln("获取音频失败:", msg)
 	w.WriteHeader(http.StatusServiceUnavailable)
-
 	if _, err := w.Write([]byte(msg)); err != nil {
 		return err
 	}
@@ -130,6 +129,10 @@ func (s *GracefulServer) edgeAPIHandler(w http.ResponseWriter, r *http.Request) 
 	}
 }
 
+var succeed = make(chan []byte)
+var failed = make(chan []byte)
+var connClosed = false
+
 // 微软Azure TTS接口
 func (s *GracefulServer) azureAPIHandler(w http.ResponseWriter, r *http.Request) {
 	s.azureRwLock.Lock()
@@ -139,23 +142,35 @@ func (s *GracefulServer) azureAPIHandler(w http.ResponseWriter, r *http.Request)
 	defer r.Body.Close()
 	ssml, _ := io.ReadAll(r.Body)
 
-	b, err := azure.GetAudioForRetry(string(ssml), format, 3)
-	if err != nil {
-		if e := sendErrorMsg(w, err.Error()); e != nil {
-			log.Warnln("发送错误消息失败:", e)
+	go func() {
+		b, err := azure.GetAudio(string(ssml), format)
+		if !connClosed { //信道未关闭,说明客户端正在等待响应中
+			if err != nil { /* 发送失败原因 */
+				failed <- []byte(err.Error())
+				return
+			}
+			succeed <- b
 		}
-		return
-	}
+	}()
 
-	w.Header().Set("Content-Type", formatContentType(format))
-	w.Header().Set("Connection", "keep-alive")
-	w.Header().Set("Keep-Alive", "timeout=5")
-	w.Header().Set("Content-Length", strconv.FormatInt(int64(len(b)), 10))
+	select {
+	case b := <-succeed: /* 成功接收到音频 */
+		w.Header().Set("Content-Type", formatContentType(format))
+		w.Header().Set("Content-Length", strconv.FormatInt(int64(len(b)), 10))
+		w.Header().Set("Connection", "keep-alive")
+		w.Header().Set("Keep-Alive", "timeout=5")
+		_, err := w.Write(b)
+		if err != nil {
+			log.Warnln(err)
+		}
+	case b := <-failed: /* 失败 */
+		w.WriteHeader(http.StatusInternalServerError)
+		w.Write(b)
+	case <-r.Context().Done(): /* 连接关闭 */
+		log.Warnln("客户端连接 主动关闭/意外断开")
+		connClosed = true
+		azure.CloseConn()
 
-	_, err = w.Write(b)
-	if err != nil {
-		log.Warnln("写入音频数据失败:", err)
-		return
 	}
 }
 
