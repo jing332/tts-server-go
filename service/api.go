@@ -21,8 +21,8 @@ type GracefulServer struct {
 	serveMux     *http.ServeMux
 	shutdownLoad chan struct{}
 
-	edgeRwLock  sync.Mutex
-	azureRwLock sync.Mutex
+	edgeLock  sync.Mutex
+	azureLock sync.Mutex
 }
 
 // HandleFunc 注册
@@ -105,12 +105,12 @@ func sendErrorMsg(w http.ResponseWriter, msg string) error {
 
 // Microsoft Edge 大声朗读接口
 func (s *GracefulServer) edgeAPIHandler(w http.ResponseWriter, r *http.Request) {
-	s.edgeRwLock.Lock()
-	defer s.edgeRwLock.Unlock()
+	s.edgeLock.Lock()
+	defer s.edgeLock.Unlock()
 	defer r.Body.Close()
 	ssml, _ := io.ReadAll(r.Body)
 	format := r.Header.Get("Format")
-	b, err := edge.GetAudioForRetry(string(ssml), format, 3)
+	b, err := edge.GetAudio(string(ssml), format)
 	if err != nil {
 		if e := sendErrorMsg(w, err.Error()); e != nil {
 			log.Warnln("发送错误消息失败:", e)
@@ -135,8 +135,8 @@ var connClosed = false
 
 // 微软Azure TTS接口
 func (s *GracefulServer) azureAPIHandler(w http.ResponseWriter, r *http.Request) {
-	s.azureRwLock.Lock()
-	defer s.azureRwLock.Unlock()
+	s.azureLock.Lock()
+	defer s.azureLock.Unlock()
 	format := r.Header.Get("Format")
 
 	defer r.Body.Close()

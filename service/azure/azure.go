@@ -160,17 +160,17 @@ func GetAudio(ssml, outputFormat string) ([]byte, error) {
 	return AudioData, nil
 }
 
-func GetAudioForRetry(ssml, outputFormat string, retryCount int) ([]byte, error) {
-	body, err := GetAudio(ssml, outputFormat)
-	if err != nil {
-		for i := 0; i < retryCount; i++ {
-			log.Warnf("第%d次重试...⬇⬇⬇", i+1)
-			body, err = GetAudio(ssml, outputFormat)
-			if err == nil { //无错误
-				break
-			}
-		}
-	}
-
-	return body, err
-}
+//func GetAudioForRetry(ssml, outputFormat string, retryCount int) ([]byte, error) {
+//	body, err := GetAudio(ssml, outputFormat)
+//	if err != nil {
+//		for i := 0; i < retryCount; i++ {
+//			log.Warnf("第%d次重试...⬇⬇⬇", i+1)
+//			body, err = GetAudio(ssml, outputFormat)
+//			if err == nil { //无错误
+//				break
+//			}
+//		}
+//	}
+//
+//	return body, err
+//}
