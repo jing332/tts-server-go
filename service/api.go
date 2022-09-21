@@ -30,8 +30,9 @@ func (s *GracefulServer) HandleFunc() {
 	if s.serveMux == nil {
 		s.serveMux = &http.ServeMux{}
 	}
+	s.serveMux.Handle("/api/azure", http.TimeoutHandler(http.HandlerFunc(s.azureAPIHandler), 60*time.Second, ""))
 	s.serveMux.HandleFunc("/", s.webAPIHandler)
-	s.serveMux.HandleFunc("/api/azure", s.azureAPIHandler)
+	//s.serveMux.HandleFunc("/api/azure", s.azureAPIHandler)
 	s.serveMux.HandleFunc("/api/ra", s.edgeAPIHandler)
 	s.serveMux.HandleFunc("/api/legado", s.legadoAPIHandler)
 }
@@ -45,7 +46,7 @@ func (s *GracefulServer) ListenAndServe(port int64) error {
 	s.Server = &http.Server{
 		Addr:           ":" + strconv.FormatInt(port, 10),
 		ReadTimeout:    10 * time.Second,
-		WriteTimeout:   30 * time.Second,
+		WriteTimeout:   60 * time.Second,
 		MaxHeaderBytes: 1 << 20,
 		Handler:        s.serveMux,
 	}
@@ -129,9 +130,7 @@ func (s *GracefulServer) edgeAPIHandler(w http.ResponseWriter, r *http.Request) 
 	}
 }
 
-var succeed = make(chan []byte)
-var failed = make(chan []byte)
-var connClosed = false
+var ttsAzure *azure.TTS
 
 // 微软Azure TTS接口
 func (s *GracefulServer) azureAPIHandler(w http.ResponseWriter, r *http.Request) {
@@ -141,20 +140,27 @@ func (s *GracefulServer) azureAPIHandler(w http.ResponseWriter, r *http.Request)
 
 	defer r.Body.Close()
 	ssml, _ := io.ReadAll(r.Body)
+	log.Infoln("接收到SSML: ", string(ssml))
 
+	if ttsAzure == nil {
+		ttsAzure = &azure.TTS{}
+	}
+
+	var succeed = make(chan []byte)
+	var failed = make(chan []byte)
 	go func() {
-		b, err := azure.GetAudio(string(ssml), format)
-		if !connClosed { //信道未关闭,说明客户端正在等待响应中
-			if err != nil { /* 发送失败原因 */
-				failed <- []byte(err.Error())
-				return
-			}
-			succeed <- b
+		b, err := ttsAzure.GetAudio(string(ssml), format)
+		if err != nil {
+			failed <- []byte(err.Error())
+			return
 		}
+		succeed <- b
 	}()
 
-	select {
+	startTime := time.Now()
+	select { /* 阻塞 等待结果 */
 	case b := <-succeed: /* 成功接收到音频 */
+		log.Infoln("音频下载完成")
 		w.Header().Set("Content-Type", formatContentType(format))
 		w.Header().Set("Content-Length", strconv.FormatInt(int64(len(b)), 10))
 		w.Header().Set("Connection", "keep-alive")
@@ -164,14 +170,19 @@ func (s *GracefulServer) azureAPIHandler(w http.ResponseWriter, r *http.Request)
 			log.Warnln(err)
 		}
 	case b := <-failed: /* 失败 */
+		log.Warnln("获取音频失败:", string(b))
+		ttsAzure.CloseConn()
+		ttsAzure = nil
 		w.WriteHeader(http.StatusInternalServerError)
 		w.Write(b)
-	case <-r.Context().Done(): /* 连接关闭 */
+	case <-r.Context().Done(): /* 与阅读APP断开连接 */
 		log.Warnln("客户端连接 主动关闭/意外断开")
-		connClosed = true
-		azure.CloseConn()
-
+		ttsAzure.CloseConn()
+		ttsAzure = nil
+		return
 	}
+	elapsedTime := time.Since(startTime) / time.Millisecond
+	log.Infof("耗时: %dms\n", elapsedTime)
 }
 
 func (s *GracefulServer) legadoAPIHandler(w http.ResponseWriter, r *http.Request) {
@@ -205,7 +216,7 @@ func genLegodoJson(api, name, voiceName, styleName, styleDegree, roleName, voice
 	}
 
 	head := `{"Content-Type":"text/plain","Authorization":"Bearer ","Format":"` + voiceFormat + `"}`
-	legadoJson := &LegadoJson{Name: name, URL: url, ID: t, LastUpdateTime: t, ContentType: formatContentType(roleName), Header: head}
+	legadoJson := &LegadoJson{Name: name, URL: url, ID: t, LastUpdateTime: t, ContentType: formatContentType(voiceFormat), Header: head}
 
 	body, err := json.Marshal(legadoJson)
 	if err != nil {

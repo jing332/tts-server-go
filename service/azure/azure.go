@@ -7,28 +7,21 @@ import (
 	tts_server_go "github.com/jing332/tts-server-go"
 	log "github.com/sirupsen/logrus"
 	"strings"
-	"sync"
 	"time"
 )
 
 var wssUrl = `wss://eastus.api.speech.microsoft.com/cognitiveservices/websocket/v1?TricType=AzureDemo&Authorization=bearer%20undefined&X-ConnectionId=`
-var conn *websocket.Conn = nil
-var uuid string
 
-type TNextReaderCallBack func(*websocket.Conn, int, []byte, error) (closed bool)
-
-var onNextReader TNextReaderCallBack
-
-func SetWssUrl(host string) {
-	if host == "" {
-		wssUrl = `wss://eastus.api.speech.microsoft.com/cognitiveservices/websocket/v1?TrafficType=AzureDemo&Authorization=bearer%20undefined&X-ConnectionId=`
-	} else {
-		wssUrl = "wss://" + host + "/cognitiveservices/websocket/v1?TrafficType=AzureDemo&Authorization=bearer%20undefined&X-ConnectionId=`"
-		log.Infoln("使用自定义接口地址:", wssUrl)
-	}
+type TTS struct {
+	wssUrl        string
+	uuid          string
+	conn          *websocket.Conn
+	onReadMessage TReadMessage
 }
 
-func wssConn() (err error) {
+type TReadMessage func(messageType int, p []byte, errMessage error) (finished bool)
+
+func (t *TTS) NewConn() error {
 	log.Infoln("创建WebSocket连接(Azure)...")
 	dl := websocket.Dialer{
 		EnableCompression: true,
@@ -40,19 +33,22 @@ func wssConn() (err error) {
 		User-Agent:Mozilla/5.0 (Linux; Android 7.1.2; M2012K11AC Build/N6F26Q; wv) AppleWebKit/537.36 (KHTML, like Gecko) Version/4.0 Chrome/81.0.4044.117 Mobile Safari/537.36
 		host:eastus.api.speech.microsoft.com
 		Origin:https://azure.microsoft.com`)
-	conn, _, err = dl.Dial(wssUrl+uuid, head)
-
+	var err error
+	t.conn, _, err = dl.Dial(wssUrl+t.uuid, head)
 	if err != nil {
-		return fmt.Errorf("创建WebScoket连接失败:%s", err)
+		return err
 	}
 
-	//监听 用来判断连接是否关闭 (空闲140s后服务器则会断开WebSocket连接)
 	go func() {
 		for {
-			msgType, r, err := conn.ReadMessage()
-			if closed := onNextReader(conn, msgType, r, err); closed {
-				conn = nil
-				return //连接已关闭 退出监听
+			if t.conn == nil {
+				return
+			}
+			messageType, p, err := t.conn.ReadMessage()
+			closed := t.onReadMessage(messageType, p, err)
+			if closed {
+				t.conn = nil
+				return
 			}
 		}
 	}()
@@ -60,117 +56,82 @@ func wssConn() (err error) {
 	return nil
 }
 
-// CloseConn 强制关闭连接
-func CloseConn() {
-	if conn != nil { //关闭底层net连接
-		conn.Close()
-		conn = nil
+func (t *TTS) CloseConn() {
+	if t.conn != nil {
+		t.conn.WriteMessage(websocket.CloseMessage, nil)
+		t.conn.Close()
+		t.conn = nil
 	}
 }
 
-// 发送配置消息，其中包括音频格式
-func sendPrefixInfo(outputFormat string) error {
-	m1 := "Path: speech.config\r\nX-RequestId: " + uuid + "\r\nX-Timestamp: " + tts_server_go.GetISOTime() +
-		"\r\nContent-Type: application/json\r\n\r\n{\"context\":{\"system\":{\"name\":\"SpeechSDK\",\"version\":\"1.19.0\",\"build\":\"JavaScript\",\"lang\":\"JavaScript\",\"os\":{\"platform\":\"Browser/Linux x86_64\",\"name\":\"Mozilla/5.0 (X11; Linux x86_64; rv:78.0) Gecko/20100101 Firefox/78.0\",\"version\":\"5.0 (X11)\"}}}}"
-	m2 := "Path: synthesis.context\r\nX-RequestId: " + uuid + "\r\nX-Timestamp: " + tts_server_go.GetISOTime() +
-		"\r\nContent-Type: application/json\r\n\r\n{\"synthesis\":{\"audio\":{\"metadataOptions\":{\"sentenceBoundaryEnabled\":false,\"wordBoundaryEnabled\":false},\"outputFormat\":\"" + outputFormat + "\"}}}"
-	err := conn.WriteMessage(websocket.TextMessage, []byte(m1))
-	if err != nil {
-		return fmt.Errorf("发送Prefix1失败: %s", err)
-	}
-	err = conn.WriteMessage(websocket.TextMessage, []byte(m2))
-	if err != nil {
-		return fmt.Errorf("发送Prefix2失败: %s", err)
-	}
-
-	return nil
-}
-
-// 发送SSML消息，其中包括要朗读的文本
-func sendSsmlMsg(ssml string) error {
-	log.Infoln("发送SSML:", ssml)
-	msg := "Path: ssml\r\nX-RequestId: " + uuid + "\r\nX-Timestamp: " + tts_server_go.GetISOTime() + "\r\nContent-Type: application/ssml+xml\r\n\r\n" + ssml
-	err := conn.WriteMessage(websocket.TextMessage, []byte(msg))
-	if err != nil {
-		return fmt.Errorf("发送SSML失败: %s", err)
-	}
-	return nil
-}
-
-func GetAudio(ssml, outputFormat string) ([]byte, error) {
-	startTime := time.Now()
-	uuid = tools.GetUUID()
-	if conn == nil { //无现有WebSocket连接
-		err := wssConn() //新建WebSocket连接
+func (t *TTS) GetAudio(ssml, format string) (audioData []byte, err error) {
+	t.uuid = tools.GetUUID()
+	if t.conn == nil {
+		err := t.NewConn()
 		if err != nil {
 			return nil, err
 		}
 	}
 
-	err := sendPrefixInfo(outputFormat)
-	if err != nil {
-		return nil, fmt.Errorf("发送Prefix消息失败: %s", err)
-	}
-
-	var AudioData []byte
-	wg := &sync.WaitGroup{}
-	wg.Add(1)
-	//处理服务器返回内容
-	onNextReader = func(c *websocket.Conn, msgType int, body []byte, errMsg error) bool {
-		if msgType == -1 && body == nil && errMsg != nil { //已经断开链接
-			log.Infoln("服务器已关闭WebSocket连接", errMsg)
-			if wg != nil {
-				err = errMsg
-				wg.Done() //切回主协程 在接收音频、消息错误时调用
-			}
-			return true //告诉调用者连接已经关闭了
+	var finished = make(chan bool)
+	var failed = make(chan error)
+	t.onReadMessage = func(messageType int, p []byte, errMessage error) bool {
+		if messageType == -1 && p == nil && errMessage != nil { //已经断开链接
+			//log.Infoln("服务器已关闭WebSocket连接", errMessage)
+			failed <- errMessage
+			return true
 		}
 
-		if msgType == 2 {
-			index := strings.Index(string(body), "Path:audio")
-			data := []byte(string(body)[index+12:])
-			AudioData = append(AudioData, data...)
-		} else if msgType == 1 && string(body)[len(string(body))-14:len(string(body))-6] == "turn.end" {
-			log.Infoln("音频接收完成")
-			wg.Done()
+		if messageType == 2 {
+			index := strings.Index(string(p), "Path:audio")
+			data := []byte(string(p)[index+12:])
+			audioData = append(audioData, data...)
+		} else if messageType == 1 && string(p)[len(string(p))-14:len(string(p))-6] == "turn.end" {
+			finished <- true
 			return false
 		}
 		return false
 	}
-
-	err = sendSsmlMsg(ssml)
+	err = t.sendConfigMessage(format)
 	if err != nil {
-		return nil, fmt.Errorf("发送SSML消息失败: %s", err)
+		return nil, err
 	}
-	log.Infoln("接收 消息/音频...")
-	wg.Wait()
-	wg = nil
-
+	err = t.sendSsmlMessage(ssml)
 	if err != nil {
-		return nil, err //服务器返回的错误信息
+		return nil, err
 	}
 
-	elapsedTime := time.Since(startTime) / time.Millisecond // duration in ms
-	log.Infof("耗时: %dms\n", elapsedTime)
-
-	if err != nil {
-		return nil, err //服务器返回的错误信息
+	select {
+	case <-finished:
+		return audioData, err
+	case errMessage := <-failed:
+		return nil, errMessage
 	}
-
-	return AudioData, nil
 }
 
-//func GetAudioForRetry(ssml, outputFormat string, retryCount int) ([]byte, error) {
-//	body, err := GetAudio(ssml, outputFormat)
-//	if err != nil {
-//		for i := 0; i < retryCount; i++ {
-//			log.Warnf("第%d次重试...⬇⬇⬇", i+1)
-//			body, err = GetAudio(ssml, outputFormat)
-//			if err == nil { //无错误
-//				break
-//			}
-//		}
-//	}
-//
-//	return body, err
-//}
+func (t *TTS) sendConfigMessage(format string) error {
+	time := tts_server_go.GetISOTime()
+	m1 := "Path: speech.config\r\nX-RequestId: " + t.uuid + "\r\nX-Timestamp: " + time +
+		"\r\nContent-Type: application/json\r\n\r\n{\"context\":{\"system\":{\"name\":\"SpeechSDK\",\"version\":\"1.19.0\",\"build\":\"JavaScript\",\"lang\":\"JavaScript\",\"os\":{\"platform\":\"Browser/Linux x86_64\",\"name\":\"Mozilla/5.0 (X11; Linux x86_64; rv:78.0) Gecko/20100101 Firefox/78.0\",\"version\":\"5.0 (X11)\"}}}}"
+	m2 := "Path: synthesis.context\r\nX-RequestId: " + t.uuid + "\r\nX-Timestamp: " + time +
+		"\r\nContent-Type: application/json\r\n\r\n{\"synthesis\":{\"audio\":{\"metadataOptions\":{\"sentenceBoundaryEnabled\":false,\"wordBoundaryEnabled\":false},\"outputFormat\":\"" + format + "\"}}}"
+	err := t.conn.WriteMessage(websocket.TextMessage, []byte(m1))
+	if err != nil {
+		return fmt.Errorf("发送Config1失败: %s", err)
+	}
+	err = t.conn.WriteMessage(websocket.TextMessage, []byte(m2))
+	if err != nil {
+		return fmt.Errorf("发送Config2失败: %s", err)
+	}
+
+	return nil
+}
+
+func (t *TTS) sendSsmlMessage(ssml string) error {
+	msg := "Path: ssml\r\nX-RequestId: " + t.uuid + "\r\nX-Timestamp: " + tts_server_go.GetISOTime() + "\r\nContent-Type: application/ssml+xml\r\n\r\n" + ssml
+	err := t.conn.WriteMessage(websocket.TextMessage, []byte(msg))
+	if err != nil {
+		return fmt.Errorf("发送SSML失败: %s", err)
+	}
+	return nil
+}
