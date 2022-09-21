@@ -21,6 +21,11 @@ jobs:
       matrix:
         goos: [linux, windows, darwin, android]
         goarch: ["386", amd64, arm, arm64]
+        include:
+        - goos: linux
+          goarch: mipsle
+        - goos: linux
+          goarch: mips
         exclude:
          - goos: darwin
            goarch: arm
