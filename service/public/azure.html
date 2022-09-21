@@ -122,6 +122,12 @@
             <div style="height:20px"></div>
             <div class="row">
                 <div class="col">
+                    <label class="text-success" id="audioInfoLabel">大小: 0kb | 耗时: 0ms</label>
+<!--                    <strong id="audioInfoLabel" >大小: 0kb | 耗时: 0ms</strong>-->
+                </div>
+            </div>
+            <div class="row">
+                <div class="col">
                     <button id="previewButton" type="button" class="btn btn-secondary" onclick="preview()">测试</button>
                     <button type="button" class="btn btn-primary" onclick='createLegadoUrl()'>生成阅读（legado）语音引擎链接
                     </button>
@@ -326,7 +332,7 @@
         </speak > `
 
         return ssml;
-    }
+    }7
 
     /* 单位转换 */
     function unitConversion(limit) {
@@ -368,16 +374,21 @@
         headers['Format'] = voiceFormat;
 
         let button = document.getElementById('previewButton');
+        let textInfo = document.getElementById('audioInfoLabel')
         button.disabled = true;
+        textInfo.innerText = "大小: 0kb | 耗时: 0ms"
         let ctx = new AudioContext();
+        let startTime = Date.now()
         fetch('/api/azure', {
             method: 'post',
             headers: headers,
             body: ssml
         }).then(response => {
             if (response.status == 200) {
-                let audioLen = response.headers.get("Content-Length")
-                button.innerText = '大小: ' + unitConversion(audioLen)
+                let audioSize = response.headers.get("Content-Length")
+                let elapsedTme = Date.now() - startTime
+                textInfo.innerText =
+                    `大小: ${unitConversion(audioSize)} | 耗时: ${elapsedTme}ms`
                 return response.arrayBuffer()
             } else if (response.status == 401) {
                 throw '无效的密钥';
@@ -392,15 +403,10 @@
                 player.start(ctx.currentTime);
             })
             .catch(reason => {
-                button.disabled = false
-                button.innerText = '测试'
                 alert(reason);
             })
             .finally(() => {
-                setTimeout(function () {
-                    button.disabled = false
-                    button.innerText = '测试'
-                }, 5000)
+                button.disabled = false
             });
     }
 
