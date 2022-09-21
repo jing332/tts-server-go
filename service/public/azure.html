@@ -412,9 +412,6 @@
         let voiceFormat = document.getElementsByName('voiceFormat')[0].value;
         let token = document.getElementsByName('token')[0].value;
         let previewText = document.getElementsByName('previewText')[0].value;
-        if (roleName == 'default') {
-            roleName = ''
-        }
         let url = window.location.protocol + '//' + window.location.host + '/api/legado?api=' + encodeURI(window.location.protocol + '//' + window.location.host + '/api/azure')
             + '&name=' + encodeURI(name)
             + '&voiceName=' + voiceName
