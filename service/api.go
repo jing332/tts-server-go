@@ -176,10 +176,14 @@ func (s *GracefulServer) azureAPIHandler(w http.ResponseWriter, r *http.Request)
 		w.WriteHeader(http.StatusInternalServerError)
 		w.Write(b)
 	case <-r.Context().Done(): /* 与阅读APP断开连接 */
-		log.Warnln("客户端连接 主动关闭/意外断开")
-		ttsAzure.CloseConn()
-		ttsAzure = nil
-		return
+		log.Warnln("客户端(阅读APP)连接 主动关闭/意外断开")
+		select { /* 三秒内如果成功下载, 就保留与微软服务器的连接 */
+		case <-succeed:
+			log.Debugln("断开后3s内成功下载")
+		case <-time.After(time.Second * 3): /* 抛弃WebSocket连接 */
+			ttsAzure.CloseConn()
+			ttsAzure = nil
+		}
 	}
 	elapsedTime := time.Since(startTime) / time.Millisecond
 	log.Infof("耗时: %dms\n", elapsedTime)
@@ -189,11 +193,11 @@ func (s *GracefulServer) legadoAPIHandler(w http.ResponseWriter, r *http.Request
 	params := r.URL.Query()
 	apiUrl := params.Get("api")
 	name := params.Get("name")
-	voiceName := params.Get("voiceName")
-	styleName := params.Get("styleName")
-	styleDegree := params.Get("styleDegree")
-	roleName := params.Get("roleName")
-	voiceFormat := params.Get("voiceFormat")
+	voiceName := params.Get("voiceName")     /* 发音人 */
+	styleName := params.Get("styleName")     /* 风格 */
+	styleDegree := params.Get("styleDegree") /* 风格强度(0.1-2.0) */
+	roleName := params.Get("roleName")       /* 角色(身份) */
+	voiceFormat := params.Get("voiceFormat") /*音频格式*/
 
 	jsonStr, err := genLegodoJson(apiUrl, name, voiceName, styleName, styleDegree, roleName, voiceFormat)
 	if err != nil {
@@ -207,10 +211,10 @@ func (s *GracefulServer) legadoAPIHandler(w http.ResponseWriter, r *http.Request
 func genLegodoJson(api, name, voiceName, styleName, styleDegree, roleName, voiceFormat string) ([]byte, error) {
 	t := time.Now().UnixNano() / 1e6 //毫秒时间戳
 	var url string
-	if styleName == "" {
+	if styleName == "" { /* Edge大声朗读 */
 		url = api + ` ,{"method":"POST","body":"<speak xmlns=\"http://www.w3.org/2001/10/synthesis\" xmlns:mstts=\"http://www.w3.org/2001/mstts\" xmlns:emo=\"http://www.w3.org/2009/10/emotionml\" version=\"1.0\" xml:lang=\"en-US\"><voice name=\"` +
 			voiceName + `\"><prosody rate=\"{{(speakSpeed -10) * 2}}%\" pitch=\"+0Hz\">{{String(speakText).replace(/&/g, '&amp;').replace(/\"/g, '&quot;').replace(/'/g, '&apos;').replace(/</g, '&lt;').replace(/>/g, '&gt;')}}</prosody></voice></speak>"}`
-	} else {
+	} else { /* Azure TTS */
 		url = api + ` ,{"method":"POST","body":"<speak xmlns=\"http://www.w3.org/2001/10/synthesis\" xmlns:mstts=\"http://www.w3.org/2001/mstts\" xmlns:emo=\"http://www.w3.org/2009/10/emotionml\" version=\"1.0\" xml:lang=\"en-US\"><voice name=\"` +
 			voiceName + `\"><mstts:express-as style=\"` + styleName + `\" styledegree=\"` + styleDegree + `\" role=\"` + roleName + `\"><prosody rate=\"{{(speakSpeed -10) * 2}}%\" pitch=\"+0Hz\">{{String(speakText).replace(/&/g, '&amp;').replace(/\"/g, '&quot;').replace(/'/g, '&apos;').replace(/</g, '&lt;').replace(/>/g, '&gt;')}}</prosody> </mstts:express-as></voice></speak>"}`
 	}
@@ -226,6 +230,7 @@ func genLegodoJson(api, name, voiceName, styleName, styleDegree, roleName, voice
 	return body, nil
 }
 
+/* 根据音频格式返回对应的Content-Type */
 func formatContentType(format string) string {
 	t := strings.Split(format, "-")[0]
 	switch t {
@@ -259,5 +264,4 @@ type LegadoJson struct {
 	//LoginCheckJs   string `json:"loginCheckJs"`
 	//LoginUI        string `json:"loginUi"`
 	//LoginURL       string `json:"loginUrl"`
-
 }
