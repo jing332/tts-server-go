@@ -85,7 +85,7 @@
                     <option value="riff-48khz-16bit-mono-pcm">riff-48khz-16bit-mono-pcm</option>
                     <option value="riff-8khz-8bit-mono-mulaw">riff-8khz-8bit-mono-mulaw</option>
                     <option value="riff-8khz-8bit-mono-alaw">riff-8khz-8bit-mono-alaw</option>
-                    <option value="audio-16khz-32kbitrate-mono-mp3">audio-16khz-32kbitrate-mono-mp3</option>
+                    <option value="audio-16khz-32kbitrate-mono-mp3" selected>audio-16khz-32kbitrate-mono-mp3</option>
                     <option value="audio-16khz-64kbitrate-mono-mp3">audio-16khz-64kbitrate-mono-mp3</option>
                     <option value="audio-16khz-128kbitrate-mono-mp3">audio-16khz-128kbitrate-mono-mp3</option>
                     <option value="audio-24khz-48kbitrate-mono-mp3">audio-24khz-48kbitrate-mono-mp3</option>
@@ -94,7 +94,7 @@
                     <option value="audio-48khz-96kbitrate-mono-mp3">audio-48khz-96kbitrate-mono-mp3</option>
                     <option value="audio-48khz-192kbitrate-mono-mp3">audio-48khz-192kbitrate-mono-mp3</option>
                     <option value="webm-16khz-16bit-mono-opus">webm-16khz-16bit-mono-opus</option>
-                    <option value="webm-24khz-16bit-mono-opus" selected>webm-24khz-16bit-mono-opus</option>
+                    <option value="webm-24khz-16bit-mono-opus">webm-24khz-16bit-mono-opus</option>
                     <option value="ogg-16khz-16bit-mono-opus">ogg-16khz-16bit-mono-opus</option>
                     <option value="ogg-24khz-16bit-mono-opus">ogg-24khz-16bit-mono-opus</option>
                     <option value="ogg-48khz-16bit-mono-opus">ogg-48khz-16bit-mono-opus</option>
@@ -327,23 +327,24 @@
 
         return ssml;
     }
+
     /* 单位转换 */
-    function unitConversion(limit){
+    function unitConversion(limit) {
         var size = "";
-        if(limit < 0.1 * 1024){                            //小于0.1KB，则转化成B
+        if (limit < 0.1 * 1024) {                            //小于0.1KB，则转化成B
             size = limit.toFixed(2) + "B"
-        }else if(limit < 0.1 * 1024 * 1024){            //小于0.1MB，则转化成KB
-            size = (limit/1024).toFixed(2) + "KB"
-        }else if(limit < 0.1 * 1024 * 1024 * 1024){        //小于0.1GB，则转化成MB
-            size = (limit/(1024 * 1024)).toFixed(2) + "MB"
-        }else{                                            //其他转化成GB
-            size = (limit/(1024 * 1024 * 1024)).toFixed(2) + "GB"
+        } else if (limit < 0.1 * 1024 * 1024) {            //小于0.1MB，则转化成KB
+            size = (limit / 1024).toFixed(2) + "KB"
+        } else if (limit < 0.1 * 1024 * 1024 * 1024) {        //小于0.1GB，则转化成MB
+            size = (limit / (1024 * 1024)).toFixed(2) + "MB"
+        } else {                                            //其他转化成GB
+            size = (limit / (1024 * 1024 * 1024)).toFixed(2) + "GB"
         }
 
         var sizeStr = size + "";                        //转成字符串
         var index = sizeStr.indexOf(".");                    //获取小数点处的索引
-        var dou = sizeStr.substr(index + 1 ,2)            //获取小数点后两位的值
-        if(dou == "00"){                                //判断后两位是否为00，如果是则删除00
+        var dou = sizeStr.substr(index + 1, 2)            //获取小数点后两位的值
+        if (dou == "00") {                                //判断后两位是否为00，如果是则删除00
             return sizeStr.substring(0, index) + sizeStr.substr(index + 3, 2)
         }
         return size;
@@ -396,7 +397,7 @@
                 alert(reason);
             })
             .finally(() => {
-                setTimeout(function (){
+                setTimeout(function () {
                     button.disabled = false
                     button.innerText = '测试'
                 }, 5000)
