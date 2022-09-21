@@ -95,39 +95,63 @@ func (s *GracefulServer) webAPIHandler(w http.ResponseWriter, r *http.Request) {
 
 }
 
-func sendErrorMsg(w http.ResponseWriter, msg string) error {
-	log.Warnln("获取音频失败:", msg)
-	w.WriteHeader(http.StatusServiceUnavailable)
-	if _, err := w.Write([]byte(msg)); err != nil {
-		return err
-	}
-	return nil
-}
+var ttsEdge *edge.TTS
 
 // Microsoft Edge 大声朗读接口
 func (s *GracefulServer) edgeAPIHandler(w http.ResponseWriter, r *http.Request) {
 	s.edgeLock.Lock()
 	defer s.edgeLock.Unlock()
 	defer r.Body.Close()
-	ssml, _ := io.ReadAll(r.Body)
+	body, _ := io.ReadAll(r.Body)
+	ssml := string(body)
 	format := r.Header.Get("Format")
-	b, err := edge.GetAudio(string(ssml), format)
-	if err != nil {
-		if e := sendErrorMsg(w, err.Error()); e != nil {
-			log.Warnln("发送错误消息失败:", e)
-		}
-		return
-	}
-	w.Header().Set("Content-Type", formatContentType(format))
-	w.Header().Set("Connection", "keep-alive")
-	w.Header().Set("Keep-Alive", "timeout=5")
-	w.Header().Set("Content-Length", strconv.FormatInt(int64(len(b)), 10))
 
-	_, err = w.Write(b)
-	if err != nil {
-		log.Println("写入音频数据失败:", err)
-		return
+	log.Infoln("接收到SSML(Edge):", ssml)
+	if ttsEdge == nil {
+		ttsEdge = &edge.TTS{}
 	}
+
+	var succeed = make(chan []byte)
+	var failed = make(chan string)
+	go func() {
+		b, err := ttsEdge.GetAudio(ssml, format)
+		if err != nil {
+			failed <- err.Error()
+			return
+		}
+		succeed <- b
+	}()
+
+	startTime := time.Now()
+	select { /* 阻塞 等待结果 */
+	case b := <-succeed: /* 成功接收到音频 */
+		log.Infoln("音频下载完成")
+		w.Header().Set("Content-Type", formatContentType(format))
+		w.Header().Set("Content-Length", strconv.FormatInt(int64(len(b)), 10))
+		w.Header().Set("Connection", "keep-alive")
+		w.Header().Set("Keep-Alive", "timeout=5")
+		_, err := w.Write(b)
+		if err != nil {
+			log.Warnln(err)
+		}
+	case b := <-failed: /* 失败 */
+		log.Warnln("获取音频失败:", b)
+		ttsEdge.CloseConn()
+		ttsEdge = nil
+		w.WriteHeader(http.StatusInternalServerError)
+		w.Write([]byte(b))
+	case <-r.Context().Done(): /* 与阅读APP断开连接 */
+		log.Warnln("客户端(阅读APP)连接 主动关闭/意外断开")
+		select { /* 三秒内如果成功下载, 就保留与微软服务器的连接 */
+		case <-succeed:
+			log.Debugln("断开后3s内成功下载")
+		case <-time.After(time.Second * 3): /* 抛弃WebSocket连接 */
+			ttsEdge.CloseConn()
+			ttsEdge = nil
+		}
+	}
+	elapsedTime := time.Since(startTime) / time.Millisecond
+	log.Infof("耗时: %dms\n", elapsedTime)
 }
 
 var ttsAzure *azure.TTS
@@ -140,7 +164,7 @@ func (s *GracefulServer) azureAPIHandler(w http.ResponseWriter, r *http.Request)
 
 	defer r.Body.Close()
 	ssml, _ := io.ReadAll(r.Body)
-	log.Infoln("接收到SSML: ", string(ssml))
+	log.Infoln("接收到SSML(Azure): ", string(ssml))
 
 	if ttsAzure == nil {
 		ttsAzure = &azure.TTS{}
