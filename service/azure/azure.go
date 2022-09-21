@@ -73,12 +73,17 @@ func (t *TTS) GetAudio(ssml, format string) (audioData []byte, err error) {
 		}
 	}
 
+	running := true
+	defer func() {
+		running = false
+	}()
 	var finished = make(chan bool)
 	var failed = make(chan error)
 	t.onReadMessage = func(messageType int, p []byte, errMessage error) bool {
 		if messageType == -1 && p == nil && errMessage != nil { //已经断开链接
-			//log.Infoln("服务器已关闭WebSocket连接", errMessage)
-			failed <- errMessage
+			if running {
+				failed <- errMessage
+			}
 			return true
 		}
 
