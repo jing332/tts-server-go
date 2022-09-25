@@ -134,13 +134,9 @@ func (s *GracefulServer) edgeAPIHandler(w http.ResponseWriter, r *http.Request) 
 
 	startTime := time.Now()
 	select { /* 阻塞 等待结果 */
-	case b := <-succeed: /* 成功接收到音频 */
+	case data := <-succeed: /* 成功接收到音频 */
 		log.Infoln("音频下载完成")
-		w.Header().Set("Content-Type", formatContentType(format))
-		w.Header().Set("Content-Length", strconv.FormatInt(int64(len(b)), 10))
-		w.Header().Set("Connection", "keep-alive")
-		w.Header().Set("Keep-Alive", "timeout=5")
-		_, err := w.Write(b)
+		err := writeAudioData(w, data, format)
 		if err != nil {
 			log.Warnln(err)
 		}
@@ -151,7 +147,7 @@ func (s *GracefulServer) edgeAPIHandler(w http.ResponseWriter, r *http.Request) 
 		w.WriteHeader(http.StatusInternalServerError)
 		w.Write([]byte(b.Error()))
 	case <-r.Context().Done(): /* 与阅读APP断开连接 超时15s */
-		log.Warnln("客户端(阅读APP)连接 主动关闭/意外断开")
+		log.Warnln("客户端(阅读APP)连接 超时关闭/意外断开")
 		select { /* 3s内如果成功下载, 就保留与微软服务器的连接 */
 		case <-succeed:
 			log.Debugln("断开后3s内成功下载")
@@ -164,7 +160,13 @@ func (s *GracefulServer) edgeAPIHandler(w http.ResponseWriter, r *http.Request) 
 	log.Infof("耗时: %dms\n", elapsedTime)
 }
 
+type LastAudioCache struct {
+	ssml      string
+	audioData []byte
+}
+
 var ttsAzure *azure.TTS
+var audioCache *LastAudioCache
 
 // 微软Azure TTS接口
 func (s *GracefulServer) azureAPIHandler(w http.ResponseWriter, r *http.Request) {
@@ -173,8 +175,24 @@ func (s *GracefulServer) azureAPIHandler(w http.ResponseWriter, r *http.Request)
 	format := r.Header.Get("Format")
 
 	defer r.Body.Close()
-	ssml, _ := io.ReadAll(r.Body)
-	log.Infoln("接收到SSML(Azure): ", string(ssml))
+	body, _ := io.ReadAll(r.Body)
+	ssml := string(body)
+	log.Infoln("接收到SSML(Azure): ", ssml)
+
+	if audioCache != nil {
+		if audioCache.ssml == ssml {
+			log.Infoln("与上次超时断开时音频SSML一致, 使用缓存...")
+			err := writeAudioData(w, audioCache.audioData, format)
+			if err != nil {
+				log.Warnln(err)
+			} else {
+				audioCache = nil
+			}
+			return
+		} else { /* SSML不一致, 抛弃 */
+			audioCache = nil
+		}
+	}
 
 	if ttsAzure == nil {
 		ttsAzure = &azure.TTS{}
@@ -184,7 +202,7 @@ func (s *GracefulServer) azureAPIHandler(w http.ResponseWriter, r *http.Request)
 	var failed = make(chan error)
 	go func() {
 		for i := 0; i < 3; i++ { /* 循环3次, 成功则return */
-			data, err := ttsAzure.GetAudio(string(ssml), format)
+			data, err := ttsAzure.GetAudio(ssml, format)
 			if err != nil {
 				if websocket.IsCloseError(err, websocket.CloseAbnormalClosure) { /* 1006异常断开 */
 					log.Infoln("异常断开, 自动重连...")
@@ -202,13 +220,9 @@ func (s *GracefulServer) azureAPIHandler(w http.ResponseWriter, r *http.Request)
 
 	startTime := time.Now()
 	select { /* 阻塞 等待结果 */
-	case b := <-succeed: /* 成功接收到音频 */
+	case data := <-succeed: /* 成功接收到音频 */
 		log.Infoln("音频下载完成")
-		w.Header().Set("Content-Type", formatContentType(format))
-		w.Header().Set("Content-Length", strconv.FormatInt(int64(len(b)), 10))
-		w.Header().Set("Connection", "keep-alive")
-		w.Header().Set("Keep-Alive", "timeout=5")
-		_, err := w.Write(b)
+		err := writeAudioData(w, data, format)
 		if err != nil {
 			log.Warnln(err)
 		}
@@ -219,17 +233,31 @@ func (s *GracefulServer) azureAPIHandler(w http.ResponseWriter, r *http.Request)
 		w.WriteHeader(http.StatusInternalServerError)
 		w.Write([]byte(reason.Error()))
 	case <-r.Context().Done(): /* 与阅读APP断开连接  超时15s */
-		log.Warnln("客户端(阅读APP)连接 主动关闭/意外断开")
-		select { /* 3s内如果成功下载, 就保留与微软服务器的连接 */
-		case <-succeed:
-			log.Debugln("断开后3s内成功下载")
-		case <-time.After(time.Second * 3): /* 抛弃WebSocket连接 */
+		log.Warnln("客户端(阅读APP)连接 超时关闭/意外断开")
+		select { /* 15s内如果成功下载, 就保留与微软服务器的连接 */
+		case data := <-succeed:
+			log.Infoln("断开后15s内成功下载")
+			audioCache = &LastAudioCache{
+				ssml:      ssml,
+				audioData: data,
+			}
+		case <-time.After(time.Second * 15): /* 抛弃WebSocket连接 */
 			ttsAzure.CloseConn()
 			ttsAzure = nil
 		}
 	}
 	elapsedTime := time.Since(startTime) / time.Millisecond
 	log.Infof("耗时: %dms\n", elapsedTime)
+}
+
+/* 写入音频数据到客户端(阅读APP) */
+func writeAudioData(w http.ResponseWriter, data []byte, format string) error {
+	w.Header().Set("Content-Type", formatContentType(format))
+	w.Header().Set("Content-Length", strconv.FormatInt(int64(len(data)), 10))
+	w.Header().Set("Connection", "keep-alive")
+	w.Header().Set("Keep-Alive", "timeout=5")
+	_, err := w.Write(data)
+	return err
 }
 
 func (s *GracefulServer) legadoAPIHandler(w http.ResponseWriter, r *http.Request) {
