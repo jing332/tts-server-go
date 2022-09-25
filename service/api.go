@@ -5,6 +5,7 @@ import (
 	_ "embed"
 	"encoding/json"
 	"fmt"
+	"github.com/gorilla/websocket"
 	"github.com/jing332/tts-server-go/service/azure"
 	"github.com/jing332/tts-server-go/service/edge"
 	log "github.com/sirupsen/logrus"
@@ -112,14 +113,23 @@ func (s *GracefulServer) edgeAPIHandler(w http.ResponseWriter, r *http.Request) 
 	}
 
 	var succeed = make(chan []byte)
-	var failed = make(chan string)
+	var failed = make(chan error)
 	go func() {
-		b, err := ttsEdge.GetAudio(ssml, format)
-		if err != nil {
-			failed <- err.Error()
-			return
+		for i := 0; i < 3; i++ { /* 循环3次, 成功则return */
+			data, err := ttsEdge.GetAudio(ssml, format)
+			if err != nil {
+				if websocket.IsCloseError(err, websocket.CloseAbnormalClosure) { /* 1006异常断开 */
+					log.Infoln("异常断开, 自动重连...")
+					time.Sleep(1000) /* 等待一秒 */
+				} else { /* 正常性错误，如SSML格式错误 */
+					failed <- err
+					return
+				}
+			} else { /* 成功 */
+				succeed <- data
+				return
+			}
 		}
-		succeed <- b
 	}()
 
 	startTime := time.Now()
@@ -139,10 +149,10 @@ func (s *GracefulServer) edgeAPIHandler(w http.ResponseWriter, r *http.Request) 
 		ttsEdge.CloseConn()
 		ttsEdge = nil
 		w.WriteHeader(http.StatusInternalServerError)
-		w.Write([]byte(b))
-	case <-r.Context().Done(): /* 与阅读APP断开连接 */
+		w.Write([]byte(b.Error()))
+	case <-r.Context().Done(): /* 与阅读APP断开连接 超时15s */
 		log.Warnln("客户端(阅读APP)连接 主动关闭/意外断开")
-		select { /* 三秒内如果成功下载, 就保留与微软服务器的连接 */
+		select { /* 3s内如果成功下载, 就保留与微软服务器的连接 */
 		case <-succeed:
 			log.Debugln("断开后3s内成功下载")
 		case <-time.After(time.Second * 3): /* 抛弃WebSocket连接 */
@@ -171,14 +181,23 @@ func (s *GracefulServer) azureAPIHandler(w http.ResponseWriter, r *http.Request)
 	}
 
 	var succeed = make(chan []byte)
-	var failed = make(chan []byte)
+	var failed = make(chan error)
 	go func() {
-		b, err := ttsAzure.GetAudio(string(ssml), format)
-		if err != nil {
-			failed <- []byte(err.Error())
-			return
+		for i := 0; i < 3; i++ { /* 循环3次, 成功则return */
+			data, err := ttsAzure.GetAudio(string(ssml), format)
+			if err != nil {
+				if websocket.IsCloseError(err, websocket.CloseAbnormalClosure) { /* 1006异常断开 */
+					log.Infoln("异常断开, 自动重连...")
+					time.Sleep(1000) /* 等待一秒 */
+				} else { /* 正常性错误，如SSML格式错误 */
+					failed <- err
+					return
+				}
+			} else { /* 成功 */
+				succeed <- data
+				return
+			}
 		}
-		succeed <- b
 	}()
 
 	startTime := time.Now()
@@ -193,15 +212,15 @@ func (s *GracefulServer) azureAPIHandler(w http.ResponseWriter, r *http.Request)
 		if err != nil {
 			log.Warnln(err)
 		}
-	case b := <-failed: /* 失败 */
-		log.Warnln("获取音频失败:", string(b))
+	case reason := <-failed: /* 失败 */
+		log.Warnln("获取音频失败:", reason)
 		ttsAzure.CloseConn()
 		ttsAzure = nil
 		w.WriteHeader(http.StatusInternalServerError)
-		w.Write(b)
-	case <-r.Context().Done(): /* 与阅读APP断开连接 */
+		w.Write([]byte(reason.Error()))
+	case <-r.Context().Done(): /* 与阅读APP断开连接  超时15s */
 		log.Warnln("客户端(阅读APP)连接 主动关闭/意外断开")
-		select { /* 三秒内如果成功下载, 就保留与微软服务器的连接 */
+		select { /* 3s内如果成功下载, 就保留与微软服务器的连接 */
 		case <-succeed:
 			log.Debugln("断开后3s内成功下载")
 		case <-time.After(time.Second * 3): /* 抛弃WebSocket连接 */
