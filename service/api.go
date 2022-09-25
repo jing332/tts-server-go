@@ -181,7 +181,7 @@ func (s *GracefulServer) azureAPIHandler(w http.ResponseWriter, r *http.Request)
 
 	if audioCache != nil {
 		if audioCache.ssml == ssml {
-			log.Infoln("与上次超时断开时音频SSML一致, 使用缓存...")
+			log.Infoln("与上次超时断开时音频SSML一致, 使用缓存...\n")
 			err := writeAudioData(w, audioCache.audioData, format)
 			if err != nil {
 				log.Warnln(err)
