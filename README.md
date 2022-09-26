@@ -2,6 +2,9 @@
 [![CI](https://github.com/jing332/tts-server-go/actions/workflows/main.yml/badge.svg)](https://github.com/jing332/tts-server-go/actions/workflows/main.yml)
 ![GitHub release (latest by date)](https://img.shields.io/github/downloads/jing332/tts-server-go/latest/total)
 
+# 安卓系统推荐使用 tts-server-android 安装即用
+https://github.com/jing332/tts-server-android
+
 # 下载
 请从 [Release](https://github.com/jing332/tts-server-go/releases) 下载最新代码构建程序.。
 
