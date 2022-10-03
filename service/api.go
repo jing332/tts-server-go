@@ -273,7 +273,8 @@ func (s *GracefulServer) creationAPIHandler(w http.ResponseWriter, r *http.Reque
 		ttsCreation = &creation.Creation{}
 	}
 
-	data, err := ttsCreation.GetAudio(reqData.Text, reqData.VoiceName, reqData.Format)
+	data, err := ttsCreation.GetAudio(reqData.Text, reqData.VoiceName, reqData.Rate,
+		reqData.Style, reqData.StyleDegree, reqData.Format)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		w.Write([]byte(err.Error()))
@@ -300,15 +301,22 @@ func writeAudioData(w http.ResponseWriter, data []byte, format string) error {
 
 func (s *GracefulServer) legadoAPIHandler(w http.ResponseWriter, r *http.Request) {
 	params := r.URL.Query()
+	isCreation := params.Get("isCreation")
 	apiUrl := params.Get("api")
 	name := params.Get("name")
 	voiceName := params.Get("voiceName")     /* 发音人 */
 	styleName := params.Get("styleName")     /* 风格 */
 	styleDegree := params.Get("styleDegree") /* 风格强度(0.1-2.0) */
 	roleName := params.Get("roleName")       /* 角色(身份) */
-	voiceFormat := params.Get("voiceFormat") /*音频格式*/
+	voiceFormat := params.Get("voiceFormat") /* 音频格式 */
 
-	jsonStr, err := genLegodoJson(apiUrl, name, voiceName, styleName, styleDegree, roleName, voiceFormat)
+	var jsonStr []byte
+	var err error
+	if isCreation == "1" {
+		jsonStr, err = genLegadoCreationJson(apiUrl, name, voiceName, styleName, styleDegree, roleName, voiceFormat)
+	} else {
+		jsonStr, err = genLegodoJson(apiUrl, name, voiceName, styleName, styleDegree, roleName, voiceFormat)
+	}
 	if err != nil {
 		w.WriteHeader(http.StatusBadRequest)
 		w.Write([]byte(err.Error()))
@@ -337,6 +345,18 @@ func genLegodoJson(api, name, voiceName, styleName, styleDegree, roleName, voice
 	}
 
 	return body, nil
+}
+
+func genLegadoCreationJson(api, name, voiceName, styleName, styleDegree, roleName, voiceFormat string) ([]byte, error) {
+	t := time.Now().UnixNano() / 1e6 //毫秒时间戳
+	urlJsonStr := `{"text":"{{String(speakText).replace(/&/g, '&amp;').replace(/\"/g, '&quot;').replace(/'/g, '&apos;').replace(/</g, '&lt;').replace(/>/g, '&gt;')}}","voiceName":"` + voiceName + `","rate":"{{(speakSpeed -10) * 2}}%","style":"` + styleName + `","styleDegree":"` + styleDegree + `","role":"` + roleName + `","format":"` + voiceFormat + `"}`
+	url := api + `,{"method":"POST","body":` + urlJsonStr + `}`
+	head := `{"Content-Type":"application/json"}`
+	legadoJson := &LegadoJson{Name: name, URL: url, ID: t, LastUpdateTime: t, ContentType: formatContentType(voiceFormat), Header: head}
+
+	body, err := json.Marshal(legadoJson)
+
+	return body, err
 }
 
 /* 根据音频格式返回对应的Content-Type */
@@ -376,7 +396,11 @@ type LegadoJson struct {
 }
 
 type CreationJson struct {
-	Text      string `json:"text"`
-	VoiceName string `json:"voiceName"`
-	Format    string `json:"format"`
+	Text        string `json:"text"`
+	VoiceName   string `json:"voiceName"`
+	Rate        string `json:"rate"`
+	Style       string `json:"style"`
+	StyleDegree string `json:"styleDegree"`
+	Role        string `json:"role"`
+	Format      string `json:"format"`
 }

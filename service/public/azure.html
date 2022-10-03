@@ -122,8 +122,15 @@
             <div style="height:20px"></div>
             <div class="row">
                 <div class="col">
+                    <div class="form-check form-switch">
+                        <input class="form-check-input" type="checkbox" id="creationSwitch" name="darkmode" value="yes">
+                        <label class="form-check-label" for="creationSwitch">使用Creation接口</label>
+                    </div>
+                </div>
+            </div>
+            <div class="row">
+                <div class="col">
                     <label class="text-success" id="audioInfoLabel">大小: 0kb | 耗时: 0ms</label>
-<!--                    <strong id="audioInfoLabel" >大小: 0kb | 耗时: 0ms</strong>-->
                 </div>
             </div>
             <div class="row">
@@ -332,7 +339,19 @@
         </speak > `
 
         return ssml;
-    }7
+    }
+
+    function createCreationJson(text, voiceName, styleName, styleDegree, roleName, voiceFormat) {
+        let json = JSON.stringify({
+            text: text,
+            voiceName: voiceName,
+            style: styleName,
+            styleDegree: styleDegree,
+            role: roleName,
+            format: voiceFormat
+        })
+        return json
+    }
 
     /* 单位转换 */
     function unitConversion(limit) {
@@ -366,12 +385,20 @@
         let roleName = document.getElementsByName('roleName')[0].value;
         let token = document.getElementsByName('token')[0].value;
         let previewText = document.getElementsByName('previewText')[0].value;
-        let ssml = createSSML(previewText, voiceName, styleName, styleDegree, roleName)
+
         if (token) {
             headers['Authorization'] = 'Bearer ' + token;
         }
 
-        headers['Format'] = voiceFormat;
+        var body
+        var url = "/api/azure"
+        if (document.getElementById('creationSwitch').checked) {
+            body = createCreationJson(previewText, voiceName, styleName, styleDegree, roleName, voiceFormat)
+            url = "/api/creation"
+        } else {
+            body = createSSML(previewText, voiceName, styleName, styleDegree, roleName)
+            headers['Format'] = voiceFormat;
+        }
 
         let button = document.getElementById('previewButton');
         let textInfo = document.getElementById('audioInfoLabel')
@@ -379,10 +406,10 @@
         textInfo.innerText = "大小: 0kb | 耗时: 0ms"
         let ctx = new AudioContext();
         let startTime = Date.now()
-        fetch('/api/azure', {
+        fetch(url, {
             method: 'post',
             headers: headers,
-            body: ssml
+            body: body
         }).then(response => {
             if (response.status == 200) {
                 let audioSize = response.headers.get("Content-Length")
@@ -411,6 +438,10 @@
     }
 
     function createLegadoUrl() {
+        var isCreation = 0
+        if (document.getElementById("creationSwitch").checked) {
+            isCreation = 1
+        }
         let name = document.getElementsByName('name')[0].value;
         let voiceName = document.getElementsByName('voiceName')[0].value;
         let styleName = document.getElementsByName('styleName')[0].value;
@@ -426,7 +457,7 @@
             + '&styleDegree=' + styleDegree
             + '&roleName=' + roleName
             + '&voiceFormat=' + voiceFormat
-            + '&token=' + token;
+            + '&isCreation=' + isCreation;
         let svg = new QRCode(url).svg();
         let modal = new bootstrap.Modal(document.getElementById('legadoUrlModal'))
         modal.show();

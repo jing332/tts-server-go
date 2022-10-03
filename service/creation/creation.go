@@ -23,7 +23,7 @@ type Creation struct {
 	token string
 }
 
-func (c *Creation) GetAudio(ssml, voiceName, format string) ([]byte, error) {
+func (c *Creation) GetAudio(text, voiceName, rate, style, styleDegree, format string) ([]byte, error) {
 	if c.token == "" {
 		s, err := token()
 		if err != nil {
@@ -32,17 +32,17 @@ func (c *Creation) GetAudio(ssml, voiceName, format string) ([]byte, error) {
 		c.token = s
 	}
 
-	data, err := speak(c.token, ssml, voiceName, format)
+	data, err := speak(c.token, text, voiceName, rate, style, styleDegree, format)
 	if errors.Is(err, TokenErr) { /* Token已失效 */
 		c.token = ""
-		data, err = c.GetAudio(ssml, voiceName, format)
+		data, err = c.GetAudio(text, voiceName, rate, style, styleDegree, format)
 	}
 
 	return data, err
 }
 
-func speak(token, text, voice, format string) ([]byte, error) {
-	ssml := `<!--ID=B7267351-473F-409D-9765-754A8EBCDE05;Version=1|{\"VoiceNameToIdMapItems\":[{\"Id\":\"5f55541d-c844-4e04-a7f8-1723ffbea4a9\",\"Name\":\"Microsoft Server Speech Text to Speech Voice (zh-CN, XiaoxiaoNeural)\",\"ShortName\":\"` + voice + `\",\"Locale\":\"zh-CN\",\"VoiceType\":\"StandardVoice\"}]}-->\n<!--ID=5B95B1CC-2C7B-494F-B746-CF22A0E779B7;Version=1|{\"Locales\":{\"zh-CN\":{\"AutoApplyCustomLexiconFiles\":[{}]}}}-->\n<speak version=\"1.0\" xmlns=\"http://www.w3.org/2001/10/synthesis\" xmlns:mstts=\"http://www.w3.org/2001/mstts\" xmlns:emo=\"http://www.w3.org/2009/10/emotionml\" xml:lang=\"zh-CN\"><voice name=\"` + voice + `\"><mstts:express-as style=\"\"><prosody rate=\"0%\" contour=\"\">` + text + `</prosody></mstts:express-as></voice></speak>`
+func speak(token, text, voiceName, rate, style, styleDegree, format string) ([]byte, error) {
+	ssml := `<!--ID=B7267351-473F-409D-9765-754A8EBCDE05;Version=1|{\"VoiceNameToIdMapItems\":[{\"Id\":\"5f55541d-c844-4e04-a7f8-1723ffbea4a9\",\"Name\":\"Microsoft Server Speech Text to Speech Voice (zh-CN, XiaoxiaoNeural)\",\"ShortName\":\"` + voiceName + `\",\"Locale\":\"zh-CN\",\"VoiceType\":\"StandardVoice\"}]}-->\n<!--ID=5B95B1CC-2C7B-494F-B746-CF22A0E779B7;Version=1|{\"Locales\":{\"zh-CN\":{\"AutoApplyCustomLexiconFiles\":[{}]}}}-->\n<speak version=\"1.0\" xmlns=\"http://www.w3.org/2001/10/synthesis\" xmlns:mstts=\"http://www.w3.org/2001/mstts\" xmlns:emo=\"http://www.w3.org/2009/10/emotionml\" xml:lang=\"zh-CN\"><voice name=\"` + voiceName + `\"><mstts:express-as style=\"` + style + `\" styledegree=\"` + styleDegree + `\"><prosody rate=\"` + rate + `\" contour=\"\">` + text + `</prosody></mstts:express-as></voice></speak>`
 	payload := strings.NewReader(`{
     "ssml": "` + ssml + `",
     "ttsAudioFormat": "` + format + `",
@@ -83,7 +83,6 @@ func speak(token, text, voice, format string) ([]byte, error) {
 func voices(token string) error {
 	payload := strings.NewReader(`{"queryCondition":{"items":[{"name":"VoiceTypeList","value":"StandardVoice","operatorKind":"Contains"}]}}`)
 
-	client := &http.Client{}
 	req, err := http.NewRequest(http.MethodPost, voicesUrl, payload)
 
 	if err != nil {
@@ -91,12 +90,10 @@ func voices(token string) error {
 	}
 	req.Header.Add("AccDemoPageAuthToken", token)
 	req.Header.Add("User-Agent", "Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/86.0.4240.198 Safari/537.36")
-	//req.Header.Add("CustomvoiceConnectionId", "3179c110-d1c8-11ec-b93b-f1a58394fbef")
 	req.Header.Add("X-Ms-Useragent", "SpeechStudio/2021.05.001")
 	req.Header.Add("Content-Type", "application/json")
-	//req.Header.Add("Cookie", "MC1=GUID=801391941cd14a25aaf4213be86a1597&HASH=8013&LV=202209&V=4&LU=1663552000598")
 
-	res, err := client.Do(req)
+	res, err := http.DefaultClient.Do(req)
 	if err != nil {
 		return err
 	}
