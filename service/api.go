@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"github.com/gorilla/websocket"
 	"github.com/jing332/tts-server-go/service/azure"
+	"github.com/jing332/tts-server-go/service/creation"
 	"github.com/jing332/tts-server-go/service/edge"
 	log "github.com/sirupsen/logrus"
 	"io"
@@ -22,8 +23,9 @@ type GracefulServer struct {
 	serveMux     *http.ServeMux
 	shutdownLoad chan struct{}
 
-	edgeLock  sync.Mutex
-	azureLock sync.Mutex
+	edgeLock     sync.Mutex
+	azureLock    sync.Mutex
+	creationLock sync.Mutex
 }
 
 // HandleFunc 注册
@@ -35,6 +37,7 @@ func (s *GracefulServer) HandleFunc() {
 	s.serveMux.HandleFunc("/", s.webAPIHandler)
 	//s.serveMux.HandleFunc("/api/azure", s.azureAPIHandler)
 	s.serveMux.HandleFunc("/api/ra", s.edgeAPIHandler)
+	s.serveMux.HandleFunc("/api/creation", s.creationAPIHandler)
 	s.serveMux.HandleFunc("/api/legado", s.legadoAPIHandler)
 }
 
@@ -250,6 +253,41 @@ func (s *GracefulServer) azureAPIHandler(w http.ResponseWriter, r *http.Request)
 	log.Infof("耗时: %dms\n", elapsedTime)
 }
 
+var ttsCreation *creation.Creation
+
+func (s *GracefulServer) creationAPIHandler(w http.ResponseWriter, r *http.Request) {
+	s.creationLock.Lock()
+	defer s.creationLock.Unlock()
+
+	body, _ := io.ReadAll(r.Body)
+	text := string(body)
+	log.Infoln("接收到Json(Creation): ", text)
+	var reqData CreationJson
+	err := json.Unmarshal(body, &reqData)
+	if err != nil {
+		log.Warnln(err)
+		return
+	}
+
+	if ttsCreation == nil {
+		ttsCreation = &creation.Creation{}
+	}
+
+	data, err := ttsCreation.GetAudio(reqData.Text, reqData.VoiceName, reqData.Format)
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		w.Write([]byte(err.Error()))
+		ttsCreation = nil
+		return
+	}
+
+	log.Warnln(len(data))
+	err = writeAudioData(w, data, reqData.Format)
+	if err != nil {
+		log.Warnln(err)
+	}
+}
+
 /* 写入音频数据到客户端(阅读APP) */
 func writeAudioData(w http.ResponseWriter, data []byte, format string) error {
 	w.Header().Set("Content-Type", formatContentType(format))
@@ -335,4 +373,10 @@ type LegadoJson struct {
 	//LoginCheckJs   string `json:"loginCheckJs"`
 	//LoginUI        string `json:"loginUi"`
 	//LoginURL       string `json:"loginUrl"`
+}
+
+type CreationJson struct {
+	Text      string `json:"text"`
+	VoiceName string `json:"voiceName"`
+	Format    string `json:"format"`
 }
