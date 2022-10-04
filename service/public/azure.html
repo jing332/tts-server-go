@@ -439,8 +439,10 @@
 
     function createLegadoUrl() {
         var isCreation = 0
+        var uri = '/api/azure'
         if (document.getElementById("creationSwitch").checked) {
             isCreation = 1
+            uri = `/api/creation`
         }
         let name = document.getElementsByName('name')[0].value;
         let voiceName = document.getElementsByName('voiceName')[0].value;
@@ -450,7 +452,7 @@
         let voiceFormat = document.getElementsByName('voiceFormat')[0].value;
         let token = document.getElementsByName('token')[0].value;
         let previewText = document.getElementsByName('previewText')[0].value;
-        let url = window.location.protocol + '//' + window.location.host + '/api/legado?api=' + encodeURI(window.location.protocol + '//' + window.location.host + '/api/azure')
+        let url = window.location.protocol + '//' + window.location.host + '/api/legado?api=' + encodeURI(window.location.protocol + '//' + window.location.host + uri)
             + '&name=' + encodeURI(name)
             + '&voiceName=' + voiceName
             + '&styleName=' + styleName

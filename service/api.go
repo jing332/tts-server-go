@@ -258,6 +258,7 @@ var ttsCreation *creation.Creation
 func (s *GracefulServer) creationAPIHandler(w http.ResponseWriter, r *http.Request) {
 	s.creationLock.Lock()
 	defer s.creationLock.Unlock()
+	startTime := time.Now()
 
 	body, _ := io.ReadAll(r.Body)
 	text := string(body)
@@ -274,19 +275,21 @@ func (s *GracefulServer) creationAPIHandler(w http.ResponseWriter, r *http.Reque
 	}
 
 	data, err := ttsCreation.GetAudio(reqData.Text, reqData.VoiceName, reqData.Rate,
-		reqData.Style, reqData.StyleDegree, reqData.Format)
+		reqData.Style, reqData.StyleDegree, reqData.Role, reqData.Format)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		w.Write([]byte(err.Error()))
 		ttsCreation = nil
-		return
+	} else {
+		err = writeAudioData(w, data, reqData.Format)
+		if err != nil {
+			log.Warnln(err)
+		}
 	}
 
-	log.Warnln(len(data))
-	err = writeAudioData(w, data, reqData.Format)
-	if err != nil {
-		log.Warnln(err)
-	}
+	elapsedTime := time.Since(startTime).Milliseconds()
+	log.Infof("耗时: %dms\n", elapsedTime)
+	time.Sleep(time.Second * 1) /* 等待1s 防止请求过于密集 */
 }
 
 /* 写入音频数据到客户端(阅读APP) */
