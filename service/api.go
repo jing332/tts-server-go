@@ -33,12 +33,12 @@ func (s *GracefulServer) HandleFunc() {
 	if s.serveMux == nil {
 		s.serveMux = &http.ServeMux{}
 	}
-	s.serveMux.Handle("/api/azure", http.TimeoutHandler(http.HandlerFunc(s.azureAPIHandler), 60*time.Second, ""))
+
 	s.serveMux.HandleFunc("/", s.webAPIHandler)
-	//s.serveMux.HandleFunc("/api/azure", s.azureAPIHandler)
-	s.serveMux.HandleFunc("/api/ra", s.edgeAPIHandler)
-	s.serveMux.HandleFunc("/api/creation", s.creationAPIHandler)
-	s.serveMux.HandleFunc("/api/legado", s.legadoAPIHandler)
+	s.serveMux.Handle("/api/legado", http.TimeoutHandler(http.HandlerFunc(s.legadoAPIHandler), 15*time.Second, "timeout"))
+	s.serveMux.Handle("/api/azure", http.TimeoutHandler(http.HandlerFunc(s.azureAPIHandler), 30*time.Second, "timeout"))
+	s.serveMux.Handle("/api/ra", http.TimeoutHandler(http.HandlerFunc(s.edgeAPIHandler), 30*time.Second, "timeout"))
+	s.serveMux.Handle("/api/creation", http.TimeoutHandler(http.HandlerFunc(s.creationAPIHandler), 30*time.Second, "timeout"))
 }
 
 // ListenAndServe 监听服务
