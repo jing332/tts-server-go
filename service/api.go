@@ -106,6 +106,8 @@ func (s *GracefulServer) edgeAPIHandler(w http.ResponseWriter, r *http.Request) 
 	s.edgeLock.Lock()
 	defer s.edgeLock.Unlock()
 	defer r.Body.Close()
+
+	startTime := time.Now()
 	body, _ := io.ReadAll(r.Body)
 	ssml := string(body)
 	format := r.Header.Get("Format")
@@ -135,7 +137,6 @@ func (s *GracefulServer) edgeAPIHandler(w http.ResponseWriter, r *http.Request) 
 		}
 	}()
 
-	startTime := time.Now()
 	select { /* 阻塞 等待结果 */
 	case data := <-succeed: /* 成功接收到音频 */
 		log.Infoln("音频下载完成")
@@ -143,12 +144,10 @@ func (s *GracefulServer) edgeAPIHandler(w http.ResponseWriter, r *http.Request) 
 		if err != nil {
 			log.Warnln(err)
 		}
-	case b := <-failed: /* 失败 */
-		log.Warnln("获取音频失败:", b)
+	case reason := <-failed: /* 失败 */
 		ttsEdge.CloseConn()
 		ttsEdge = nil
-		w.WriteHeader(http.StatusInternalServerError)
-		w.Write([]byte(b.Error()))
+		writeErrorData(w, http.StatusInternalServerError, "获取音频失败(Edge): "+reason.Error())
 	case <-r.Context().Done(): /* 与阅读APP断开连接 超时15s */
 		log.Warnln("客户端(阅读APP)连接 超时关闭/意外断开")
 		select { /* 3s内如果成功下载, 就保留与微软服务器的连接 */
@@ -159,8 +158,7 @@ func (s *GracefulServer) edgeAPIHandler(w http.ResponseWriter, r *http.Request) 
 			ttsEdge = nil
 		}
 	}
-	elapsedTime := time.Since(startTime) / time.Millisecond
-	log.Infof("耗时: %dms\n", elapsedTime)
+	log.Infof("耗时: %dms\n", time.Since(startTime).Milliseconds())
 }
 
 type LastAudioCache struct {
@@ -175,9 +173,10 @@ var audioCache *LastAudioCache
 func (s *GracefulServer) azureAPIHandler(w http.ResponseWriter, r *http.Request) {
 	s.azureLock.Lock()
 	defer s.azureLock.Unlock()
-	format := r.Header.Get("Format")
-
 	defer r.Body.Close()
+
+	startTime := time.Now()
+	format := r.Header.Get("Format")
 	body, _ := io.ReadAll(r.Body)
 	ssml := string(body)
 	log.Infoln("接收到SSML(Azure): ", ssml)
@@ -221,7 +220,6 @@ func (s *GracefulServer) azureAPIHandler(w http.ResponseWriter, r *http.Request)
 		}
 	}()
 
-	startTime := time.Now()
 	select { /* 阻塞 等待结果 */
 	case data := <-succeed: /* 成功接收到音频 */
 		log.Infoln("音频下载完成")
@@ -230,11 +228,9 @@ func (s *GracefulServer) azureAPIHandler(w http.ResponseWriter, r *http.Request)
 			log.Warnln(err)
 		}
 	case reason := <-failed: /* 失败 */
-		log.Warnln("获取音频失败:", reason)
 		ttsAzure.CloseConn()
 		ttsAzure = nil
-		w.WriteHeader(http.StatusInternalServerError)
-		w.Write([]byte(reason.Error()))
+		writeErrorData(w, http.StatusInternalServerError, "获取音频失败(Azure): "+reason.Error())
 	case <-r.Context().Done(): /* 与阅读APP断开连接  超时15s */
 		log.Warnln("客户端(阅读APP)连接 超时关闭/意外断开")
 		select { /* 15s内如果成功下载, 就保留与微软服务器的连接 */
@@ -249,8 +245,7 @@ func (s *GracefulServer) azureAPIHandler(w http.ResponseWriter, r *http.Request)
 			ttsAzure = nil
 		}
 	}
-	elapsedTime := time.Since(startTime) / time.Millisecond
-	log.Infof("耗时: %dms\n", elapsedTime)
+	log.Infof("耗时: %dms\n", time.Since(startTime).Milliseconds())
 }
 
 var ttsCreation *creation.Creation
@@ -258,8 +253,9 @@ var ttsCreation *creation.Creation
 func (s *GracefulServer) creationAPIHandler(w http.ResponseWriter, r *http.Request) {
 	s.creationLock.Lock()
 	defer s.creationLock.Unlock()
-	startTime := time.Now()
+	defer r.Body.Close()
 
+	startTime := time.Now()
 	body, _ := io.ReadAll(r.Body)
 	text := string(body)
 	log.Infoln("接收到Json(Creation): ", text)
@@ -277,8 +273,7 @@ func (s *GracefulServer) creationAPIHandler(w http.ResponseWriter, r *http.Reque
 	data, err := ttsCreation.GetAudio(reqData.Text, reqData.VoiceName, reqData.Rate,
 		reqData.Style, reqData.StyleDegree, reqData.Role, reqData.Format)
 	if err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
-		w.Write([]byte(err.Error()))
+		writeErrorData(w, http.StatusInternalServerError, "获取音频失败(Creation): "+err.Error())
 		ttsCreation = nil
 	} else {
 		err = writeAudioData(w, data, reqData.Format)
@@ -287,9 +282,8 @@ func (s *GracefulServer) creationAPIHandler(w http.ResponseWriter, r *http.Reque
 		}
 	}
 
-	elapsedTime := time.Since(startTime).Milliseconds()
-	log.Infof("耗时: %dms\n", elapsedTime)
-	time.Sleep(time.Second * 1) /* 等待1s 防止请求过于密集 */
+	log.Infof("耗时: %dms\n", time.Since(startTime).Milliseconds())
+	time.Sleep(time.Second * 2) /* 等待2s 防止请求过于密集 */
 }
 
 /* 写入音频数据到客户端(阅读APP) */
@@ -302,6 +296,17 @@ func writeAudioData(w http.ResponseWriter, data []byte, format string) error {
 	return err
 }
 
+/* 写入错误信息到客户端 */
+func writeErrorData(w http.ResponseWriter, statusCode int, data string) {
+	log.Warnln(data)
+	w.WriteHeader(statusCode)
+	_, err := w.Write([]byte(data))
+	if err != nil {
+		log.Warnln(err)
+	}
+}
+
+/* 阅读APP网络导入API */
 func (s *GracefulServer) legadoAPIHandler(w http.ResponseWriter, r *http.Request) {
 	params := r.URL.Query()
 	isCreation := params.Get("isCreation")
@@ -321,13 +326,13 @@ func (s *GracefulServer) legadoAPIHandler(w http.ResponseWriter, r *http.Request
 		jsonStr, err = genLegodoJson(apiUrl, name, voiceName, styleName, styleDegree, roleName, voiceFormat)
 	}
 	if err != nil {
-		w.WriteHeader(http.StatusBadRequest)
-		w.Write([]byte(err.Error()))
+		writeErrorData(w, http.StatusBadRequest, err.Error())
+	} else {
+		w.Write(jsonStr)
 	}
-
-	w.Write(jsonStr)
 }
 
+/* 生成阅读APP朗读朗读引擎Json (Edge, Azure) */
 func genLegodoJson(api, name, voiceName, styleName, styleDegree, roleName, voiceFormat string) ([]byte, error) {
 	t := time.Now().UnixNano() / 1e6 //毫秒时间戳
 	var url string
@@ -350,6 +355,7 @@ func genLegodoJson(api, name, voiceName, styleName, styleDegree, roleName, voice
 	return body, nil
 }
 
+/* 生成阅读APP朗读引擎Json (Creation) */
 func genLegadoCreationJson(api, name, voiceName, styleName, styleDegree, roleName, voiceFormat string) ([]byte, error) {
 	t := time.Now().UnixNano() / 1e6 //毫秒时间戳
 	urlJsonStr := `{"text":"{{String(speakText).replace(/&/g, '&amp;').replace(/\"/g, '&quot;').replace(/'/g, '&apos;').replace(/</g, '&lt;').replace(/>/g, '&gt;')}}","voiceName":"` + voiceName + `","rate":"{{(speakSpeed -10) * 2}}%","style":"` + styleName + `","styleDegree":"` + styleDegree + `","role":"` + roleName + `","format":"` + voiceFormat + `"}`
