@@ -29,7 +29,7 @@ type Creation struct {
 	token string
 }
 
-func (c *Creation) GetAudio(text, voiceName, rate, style, styleDegree, role, format string) ([]byte, error) {
+func (c *Creation) GetAudio(text, voiceName, rate, style, styleDegree, role, volume, format string) ([]byte, error) {
 	if c.token == "" {
 		s, err := GetToken()
 		if err != nil {
@@ -38,16 +38,16 @@ func (c *Creation) GetAudio(text, voiceName, rate, style, styleDegree, role, for
 		c.token = s
 	}
 
-	data, err := speak(c.token, text, voiceName, rate, style, styleDegree, role, format)
+	data, err := speak(c.token, text, voiceName, rate, style, styleDegree, role, volume, format)
 	if errors.Is(err, TokenErr) { /* Token已失效 */
 		c.token = ""
-		data, err = c.GetAudio(text, voiceName, rate, style, styleDegree, role, format)
+		data, err = c.GetAudio(text, voiceName, rate, style, styleDegree, role, volume, format)
 	}
 
 	return data, err
 }
 
-func speak(token, text, voiceName, rate, style, styleDegree, role, format string) ([]byte, error) {
+func speak(token, text, voiceName, rate, style, styleDegree, role, volume, format string) ([]byte, error) {
 	id := voicesdata.IDs[voiceName]
 	if id == "" { /* 不支持的发音人 */
 		return nil, NotSupportedVoiceErr
@@ -57,7 +57,7 @@ func speak(token, text, voiceName, rate, style, styleDegree, role, format string
 		id + `\",\"Name\":\"Microsoft Server Speech Text to Speech Voice (zh-CN, XiaoxiaoNeural)\",\"ShortName\":\"` +
 		voiceName + `\",\"Locale\":\"zh-CN\",\"VoiceType\":\"StandardVoice\"}]}-->\n<!--ID=5B95B1CC-2C7B-494F-B746-CF22A0E779B7;Version=1|{\"Locales\":{\"zh-CN\":{\"AutoApplyCustomLexiconFiles\":[{}]}}}-->\n<speak version=\"1.0\" xmlns=\"http://www.w3.org/2001/10/synthesis\" xmlns:mstts=\"http://www.w3.org/2001/mstts\" xmlns:emo=\"http://www.w3.org/2009/10/emotionml\" xml:lang=\"zh-CN\"><voice name=\"` +
 		voiceName + `\"><mstts:express-as style=\"` + style + `\" styledegree=\"` + styleDegree + `\" role=\"` +
-		role + `\"><prosody rate=\"` + rate + `\" volume=\"50%\">` + text + `</prosody></mstts:express-as></voice></speak>`
+		role + `\"><prosody rate=\"` + rate + `\" volume=\"` + volume + `\">` + text + `</prosody></mstts:express-as></voice></speak>`
 	payload := strings.NewReader(`{
     "ssml": "` + ssml + `",
     "ttsAudioFormat": "` + format + `",
