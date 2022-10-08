@@ -3,11 +3,12 @@ package creation
 import (
 	"encoding/json"
 	"errors"
+	tts_server_go "github.com/jing332/tts-server-go"
 	voicesdata "github.com/jing332/tts-server-go/service/creation/data/voices"
 	"io"
 	"net/http"
-	"strconv"
 	"strings"
+	"unicode/utf8"
 )
 
 const (
@@ -29,7 +30,7 @@ type Creation struct {
 	token string
 }
 
-func (c *Creation) GetAudio(text, voiceName, rate, style, styleDegree, role, volume, format string) ([]byte, error) {
+func (c *Creation) GetAudio(text, voiceName, rate, style, styleDegree, role, volume, format string) (audio []byte, err error) {
 	if c.token == "" {
 		s, err := GetToken()
 		if err != nil {
@@ -38,13 +39,26 @@ func (c *Creation) GetAudio(text, voiceName, rate, style, styleDegree, role, vol
 		c.token = s
 	}
 
-	data, err := speak(c.token, text, voiceName, rate, style, styleDegree, role, volume, format)
-	if errors.Is(err, TokenErr) { /* Token已失效 */
-		c.token = ""
-		data, err = c.GetAudio(text, voiceName, rate, style, styleDegree, role, volume, format)
+	/* 接口限制 文本长度不能超300 */
+	if utf8.RuneCountInString(text) > 300 {
+		chunks := tts_server_go.ChunkString(text, 290)
+		for _, v := range chunks {
+			data, err := c.GetAudio(v, voiceName, rate, style, styleDegree, role, volume, format)
+			if err != nil {
+				return nil, err
+			}
+			audio = append(audio, data...)
+		}
+		return audio, nil
 	}
 
-	return data, err
+	audio, err = speak(c.token, text, voiceName, rate, style, styleDegree, role, volume, format)
+	if errors.Is(err, TokenErr) { /* Token已失效 */
+		c.token = ""
+		audio, err = c.GetAudio(text, voiceName, rate, style, styleDegree, role, volume, format)
+	}
+
+	return audio, err
 }
 
 func speak(token, text, voiceName, rate, style, styleDegree, role, volume, format string) ([]byte, error) {
@@ -62,7 +76,7 @@ func speak(token, text, voiceName, rate, style, styleDegree, role, volume, forma
     "ssml": "` + ssml + `",
     "ttsAudioFormat": "` + format + `",
     "offsetInPlainText": 0,
-    "lengthInPlainText":` + strconv.FormatInt(int64(len(text)), 10) +
+    "lengthInPlainText":` + "300" +
 		`,"properties": {
         "SpeakTriggerSource": "AccTuningPagePlayButton"
     }
