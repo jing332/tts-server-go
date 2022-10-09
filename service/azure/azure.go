@@ -5,13 +5,18 @@ import (
 	"github.com/asters1/tools"
 	"github.com/gorilla/websocket"
 	tts_server_go "github.com/jing332/tts-server-go"
+	"io"
+	"net/http"
 
 	log "github.com/sirupsen/logrus"
 	"strings"
 	"time"
 )
 
-var wssUrl = `wss://eastus.api.speech.microsoft.com/cognitiveservices/websocket/v1?TricType=AzureDemo&Authorization=bearer%20undefined&X-ConnectionId=`
+const (
+	wssUrl    = `wss://eastus.api.speech.microsoft.com/cognitiveservices/websocket/v1?TricType=AzureDemo&Authorization=bearer%20undefined&X-ConnectionId=`
+	voicesUrl = `https://eastus.api.speech.microsoft.com/cognitiveservices/voices/list`
+)
 
 type TTS struct {
 	wssUrl        string
@@ -140,4 +145,30 @@ func (t *TTS) sendSsmlMessage(ssml string) error {
 		return fmt.Errorf("发送SSML失败: %s", err)
 	}
 	return nil
+}
+
+func GetVoices() ([]byte, error) {
+	req, err := http.NewRequest(http.MethodGet, voicesUrl, nil)
+	if err != nil {
+		return nil, err
+	}
+	req.Header.Add("User-Agent", "Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/86.0.4240.198 Safari/537.36")
+	req.Header.Add("X-Ms-Useragent", "SpeechStudio/2021.05.001")
+	req.Header.Add("Content-Type", "application/json")
+
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return nil, err
+	}
+
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return nil, err
+	}
+	return body, nil
 }

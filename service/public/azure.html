@@ -12,8 +12,10 @@
 <body>
 <nav class="navbar navbar-expand-lg navbar-light bg-light">
     <div class="container-fluid">
-        <a class="navbar-brand github-button" href="https://github.com/jing332/tts-server-go" data-size="large" data-show-count="true" aria-label="Star jing332/tts-server-go on GitHub">Star tts-server-go</a>
-        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarSupportedContent" aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
+        <a class="navbar-brand github-button" href="https://github.com/jing332/tts-server-go" data-size="large"
+           data-show-count="true" aria-label="Star jing332/tts-server-go on GitHub">Star tts-server-go</a>
+        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarSupportedContent"
+                aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
             <span class="navbar-toggler-icon"></span>
         </button>
         <div class="collapse navbar-collapse" id="navbarSupportedContent">
@@ -128,14 +130,6 @@
                 </div>
             </div>
             <div style="height:20px"></div>
-            <div class="row">
-                <div class="col">
-                    <div class="form-check form-switch">
-                        <input class="form-check-input" type="checkbox" id="creationSwitch" name="darkmode" value="yes">
-                        <label class="form-check-label" for="creationSwitch">使用Creation接口</label>
-                    </div>
-                </div>
-            </div>
             <div class="row">
                 <div class="col">
                     <label class="text-success" id="audioInfoLabel">大小: 0kb | 耗时: 0ms</label>
@@ -254,7 +248,7 @@
     }
 
     let voices = {};
-    fetch('https://eastus.api.speech.microsoft.com/cognitiveservices/voices/list')
+    fetch('/api/azure/voices')
         .then(response => {
             if (response.status == 200) {
                 return response.json();
@@ -350,18 +344,6 @@
         return ssml;
     }
 
-    function createCreationJson(text, voiceName, styleName, styleDegree, roleName, voiceFormat) {
-        let json = JSON.stringify({
-            text: text,
-            voiceName: voiceName,
-            style: styleName,
-            styleDegree: styleDegree,
-            role: roleName,
-            format: voiceFormat
-        })
-        return json
-    }
-
     /* 单位转换 */
     function unitConversion(limit) {
         var size = "";
@@ -399,15 +381,8 @@
             headers['Authorization'] = 'Bearer ' + token;
         }
 
-        var body
-        var url = "/api/azure"
-        if (document.getElementById('creationSwitch').checked) {
-            body = createCreationJson(previewText, voiceName, styleName, styleDegree, roleName, voiceFormat)
-            url = "/api/creation"
-        } else {
-            body = createSSML(previewText, voiceName, styleName, styleDegree, roleName)
-            headers['Format'] = voiceFormat;
-        }
+        let body = createSSML(previewText, voiceName, styleName, styleDegree, roleName)
+        headers['Format'] = voiceFormat
 
         let button = document.getElementById('previewButton');
         let textInfo = document.getElementById('audioInfoLabel')
@@ -415,7 +390,7 @@
         textInfo.innerText = "大小: 0kb | 耗时: 0ms"
         let ctx = new AudioContext();
         let startTime = Date.now()
-        fetch(url, {
+        fetch('/api/azure', {
             method: 'post',
             headers: headers,
             body: body
@@ -447,12 +422,6 @@
     }
 
     function createLegadoUrl() {
-        var isCreation = 0
-        var uri = '/api/azure'
-        if (document.getElementById("creationSwitch").checked) {
-            isCreation = 1
-            uri = `/api/creation`
-        }
         let name = document.getElementsByName('name')[0].value;
         let voiceName = document.getElementsByName('voiceName')[0].value;
         let styleName = document.getElementsByName('styleName')[0].value;
@@ -461,14 +430,14 @@
         let voiceFormat = document.getElementsByName('voiceFormat')[0].value;
         let token = document.getElementsByName('token')[0].value;
         let previewText = document.getElementsByName('previewText')[0].value;
-        let url = window.location.protocol + '//' + window.location.host + '/api/legado?api=' + encodeURI(window.location.protocol + '//' + window.location.host + uri)
+        let url = window.location.protocol + '//' + window.location.host + '/api/legado?api=' +
+            encodeURI(window.location.protocol + '//' + window.location.host + '/api/azure')
             + '&name=' + encodeURI(name)
             + '&voiceName=' + voiceName
             + '&styleName=' + styleName
             + '&styleDegree=' + styleDegree
             + '&roleName=' + roleName
             + '&voiceFormat=' + voiceFormat
-            + '&isCreation=' + isCreation;
         let svg = new QRCode(url).svg();
         let modal = new bootstrap.Modal(document.getElementById('legadoUrlModal'))
         modal.show();

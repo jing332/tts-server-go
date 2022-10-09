@@ -36,8 +36,12 @@ func (s *GracefulServer) HandleFunc() {
 
 	s.serveMux.HandleFunc("/", s.webAPIHandler)
 	s.serveMux.Handle("/api/legado", http.TimeoutHandler(http.HandlerFunc(s.legadoAPIHandler), 15*time.Second, "timeout"))
+
 	s.serveMux.Handle("/api/azure", http.TimeoutHandler(http.HandlerFunc(s.azureAPIHandler), 30*time.Second, "timeout"))
+	s.serveMux.Handle("/api/azure/voices", http.TimeoutHandler(http.HandlerFunc(s.azureVoicesAPIHandler), 30*time.Second, "timeout"))
+
 	s.serveMux.Handle("/api/ra", http.TimeoutHandler(http.HandlerFunc(s.edgeAPIHandler), 30*time.Second, "timeout"))
+
 	s.serveMux.Handle("/api/creation", http.TimeoutHandler(http.HandlerFunc(s.creationAPIHandler), 30*time.Second, "timeout"))
 	s.serveMux.Handle("/api/creation/voices", http.TimeoutHandler(http.HandlerFunc(s.creationVoicesAPIHandler), 30*time.Second, "timeout"))
 }
@@ -366,6 +370,15 @@ func (s *GracefulServer) creationVoicesAPIHandler(w http.ResponseWriter, r *http
 	if err != nil {
 		writeErrorData(w, http.StatusInternalServerError, "获取Voices失败: "+err.Error())
 	}
+	w.Write(data)
+}
+
+func (s *GracefulServer) azureVoicesAPIHandler(w http.ResponseWriter, r *http.Request) {
+	data, err := azure.GetVoices()
+	if err != nil {
+		writeErrorData(w, http.StatusInternalServerError, err.Error())
+	}
+
 	w.Write(data)
 }
 
