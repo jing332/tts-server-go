@@ -82,8 +82,8 @@ func speak(token, text, voiceName, VoiceId, rate, style, styleDegree, role, volu
 	ssml := `<!--ID=B7267351-473F-409D-9765-754A8EBCDE05;Version=1|{\"VoiceNameToIdMapItems\":[{\"Id\":\"` +
 		VoiceId + `\",\"Name\":\"Microsoft Server Speech Text to Speech Voice (zh-CN, XiaoxiaoNeural)\",\"ShortName\":\"` +
 		voiceName + `\",\"Locale\":\"zh-CN\",\"VoiceType\":\"StandardVoice\"}]}-->\n<!--ID=5B95B1CC-2C7B-494F-B746-CF22A0E779B7;Version=1|{\"Locales\":{\"zh-CN\":{\"AutoApplyCustomLexiconFiles\":[{}]}}}-->\n<speak version=\"1.0\" xmlns=\"http://www.w3.org/2001/10/synthesis\" xmlns:mstts=\"http://www.w3.org/2001/mstts\" xmlns:emo=\"http://www.w3.org/2009/10/emotionml\" xml:lang=\"zh-CN\"><voice name=\"` +
-		voiceName + `\"><mstts:express-as style=\"` + style + `\" styledegree=\"` + styleDegree + `\" role=\"` +
-		role + `\"><prosody rate=\"` + rate + `\" volume=\"` + volume + `\">` + text + `</prosody></mstts:express-as></voice></speak>`
+		voiceName + `\"><lang xml:lang=\"zh-CN\"><mstts:express-as style=\"` + style + `\" styledegree=\"` + styleDegree + `\" role=\"` +
+		role + `\"><prosody rate=\"` + rate + `\" volume=\"` + volume + `\">` + text + `</prosody></mstts:express-as></lang></voice></speak>`
 	payload := strings.NewReader(`{
     "ssml": "` + ssml + `",
     "ttsAudioFormat": "` + format + `",
