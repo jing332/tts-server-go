@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	tts_server_go "github.com/jing332/tts-server-go"
-	voicesdata "github.com/jing332/tts-server-go/service/creation/data/voices"
+	"github.com/jing332/tts-server-go/service/creation/data/voices"
 	"io"
 	"net/http"
 	"strings"
@@ -21,7 +21,7 @@ var (
 	// TokenErr Token已失效
 	TokenErr = errors.New("unauthorized")
 	// NotSupportedVoiceErr 未在data/voices中找到发音人
-	NotSupportedVoiceErr = errors.New("not supported voice name ")
+	NotSupportedVoiceErr = errors.New("不支持的发音人(找不到Voice ID)")
 	// httpStatusCodeErr Http状态码不等于200
 	httpStatusCodeErr = errors.New("http status code not equal 200")
 )
@@ -30,7 +30,11 @@ type Creation struct {
 	token string
 }
 
-func (c *Creation) GetAudio(text, voiceName, rate, style, styleDegree, role, volume, format string) (audio []byte, err error) {
+type SpeakArg struct {
+	Text, VoiceName, VoiceId, Rate, Style, StyleDegree, Role, Volume, Format string
+}
+
+func (c *Creation) GetAudio(arg *SpeakArg) (audio []byte, err error) {
 	if c.token == "" {
 		s, err := GetToken()
 		if err != nil {
@@ -40,10 +44,12 @@ func (c *Creation) GetAudio(text, voiceName, rate, style, styleDegree, role, vol
 	}
 
 	/* 接口限制 文本长度不能超300 */
-	if utf8.RuneCountInString(text) > 300 {
-		chunks := tts_server_go.ChunkString(text, 290)
+	if utf8.RuneCountInString(arg.Text) > 300 {
+		chunks := tts_server_go.ChunkString(arg.Text, 290)
 		for _, v := range chunks {
-			data, err := c.GetAudio(v, voiceName, rate, style, styleDegree, role, volume, format)
+			tmpArg := arg
+			tmpArg.Text = v
+			data, err := c.GetAudio(tmpArg)
 			if err != nil {
 				return nil, err
 			}
@@ -52,23 +58,29 @@ func (c *Creation) GetAudio(text, voiceName, rate, style, styleDegree, role, vol
 		return audio, nil
 	}
 
-	audio, err = speak(c.token, text, voiceName, rate, style, styleDegree, role, volume, format)
+	audio, err = speak(c.token, arg.Text, arg.VoiceName, arg.VoiceId, arg.Rate, arg.Style, arg.StyleDegree,
+		arg.Role, arg.Volume, arg.Format)
 	if errors.Is(err, TokenErr) { /* Token已失效 */
 		c.token = ""
-		audio, err = c.GetAudio(text, voiceName, rate, style, styleDegree, role, volume, format)
+		audio, err = c.GetAudio(arg)
 	}
 
 	return audio, err
 }
 
-func speak(token, text, voiceName, rate, style, styleDegree, role, volume, format string) ([]byte, error) {
-	id := voicesdata.IDs[voiceName]
+func (c *Creation) GetAudioNoVoiceId(arg *SpeakArg) (audio []byte, err error) {
+	id := voices.IDs[arg.VoiceName]
 	if id == "" { /* 不支持的发音人 */
 		return nil, NotSupportedVoiceErr
 	}
+	tmpArg := arg
+	tmpArg.VoiceId = id
+	return c.GetAudio(tmpArg)
+}
 
+func speak(token, text, voiceName, VoiceId, rate, style, styleDegree, role, volume, format string) ([]byte, error) {
 	ssml := `<!--ID=B7267351-473F-409D-9765-754A8EBCDE05;Version=1|{\"VoiceNameToIdMapItems\":[{\"Id\":\"` +
-		id + `\",\"Name\":\"Microsoft Server Speech Text to Speech Voice (zh-CN, XiaoxiaoNeural)\",\"ShortName\":\"` +
+		VoiceId + `\",\"Name\":\"Microsoft Server Speech Text to Speech Voice (zh-CN, XiaoxiaoNeural)\",\"ShortName\":\"` +
 		voiceName + `\",\"Locale\":\"zh-CN\",\"VoiceType\":\"StandardVoice\"}]}-->\n<!--ID=5B95B1CC-2C7B-494F-B746-CF22A0E779B7;Version=1|{\"Locales\":{\"zh-CN\":{\"AutoApplyCustomLexiconFiles\":[{}]}}}-->\n<speak version=\"1.0\" xmlns=\"http://www.w3.org/2001/10/synthesis\" xmlns:mstts=\"http://www.w3.org/2001/mstts\" xmlns:emo=\"http://www.w3.org/2009/10/emotionml\" xml:lang=\"zh-CN\"><voice name=\"` +
 		voiceName + `\"><mstts:express-as style=\"` + style + `\" styledegree=\"` + styleDegree + `\" role=\"` +
 		role + `\"><prosody rate=\"` + rate + `\" volume=\"` + volume + `\">` + text + `</prosody></mstts:express-as></voice></speak>`

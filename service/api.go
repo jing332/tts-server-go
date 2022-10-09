@@ -39,6 +39,7 @@ func (s *GracefulServer) HandleFunc() {
 	s.serveMux.Handle("/api/azure", http.TimeoutHandler(http.HandlerFunc(s.azureAPIHandler), 30*time.Second, "timeout"))
 	s.serveMux.Handle("/api/ra", http.TimeoutHandler(http.HandlerFunc(s.edgeAPIHandler), 30*time.Second, "timeout"))
 	s.serveMux.Handle("/api/creation", http.TimeoutHandler(http.HandlerFunc(s.creationAPIHandler), 30*time.Second, "timeout"))
+	s.serveMux.Handle("/api/creation/voices", http.TimeoutHandler(http.HandlerFunc(s.creationVoicesAPIHandler), 30*time.Second, "timeout"))
 }
 
 // ListenAndServe 监听服务
@@ -83,20 +84,25 @@ func (s *GracefulServer) Shutdown(timeout time.Duration) error {
 }
 
 //go:embed public/index.html
-var indexHtml string
+var indexHtml []byte
 
 //go:embed public/azure.html
-var azureHtml string
+var azureHtml []byte
+
+//go:embed public/creation.html
+var creationHtml []byte
 
 func (s *GracefulServer) webAPIHandler(w http.ResponseWriter, r *http.Request) {
-	if r.URL.Path == "/azure.html" {
-		w.Write([]byte(azureHtml))
-	} else if r.URL.Path == "/index.html" || r.URL.Path == "/" {
-		w.Write([]byte(indexHtml))
-	} else {
+	switch r.URL.Path {
+	case "index.html", "/":
+		w.Write(indexHtml)
+	case "/azure.html":
+		w.Write(azureHtml)
+	case "/creation.html":
+		w.Write(creationHtml)
+	default:
 		w.WriteHeader(http.StatusNotFound)
 	}
-
 }
 
 var ttsEdge *edge.TTS
@@ -270,8 +276,25 @@ func (s *GracefulServer) creationAPIHandler(w http.ResponseWriter, r *http.Reque
 		ttsCreation = &creation.Creation{}
 	}
 
-	data, err := ttsCreation.GetAudio(reqData.Text, reqData.VoiceName, reqData.Rate,
-		reqData.Style, reqData.StyleDegree, reqData.Role, reqData.Volume, reqData.Format)
+	arg := &creation.SpeakArg{
+		Text:        reqData.Text,
+		VoiceName:   reqData.VoiceName,
+		VoiceId:     reqData.VoiceId,
+		Rate:        reqData.Rate,
+		Style:       reqData.Style,
+		StyleDegree: reqData.StyleDegree,
+		Role:        reqData.Role,
+		Volume:      reqData.Volume,
+		Format:      reqData.Format,
+	}
+
+	var data []byte
+	if reqData.VoiceId == "" { /* 无VoiceId 向下兼容*/
+		data, err = ttsCreation.GetAudioNoVoiceId(arg)
+	} else {
+		data, err = ttsCreation.GetAudio(arg)
+	}
+
 	if err != nil {
 		writeErrorData(w, http.StatusInternalServerError, "获取音频失败(Creation): "+err.Error())
 		ttsCreation = nil
@@ -313,6 +336,7 @@ func (s *GracefulServer) legadoAPIHandler(w http.ResponseWriter, r *http.Request
 	apiUrl := params.Get("api")
 	name := params.Get("name")
 	voiceName := params.Get("voiceName")     /* 发音人 */
+	voiceId := params.Get("voiceId")         /* 发音人ID (Creation接口) */
 	styleName := params.Get("styleName")     /* 风格 */
 	styleDegree := params.Get("styleDegree") /* 风格强度(0.1-2.0) */
 	roleName := params.Get("roleName")       /* 角色(身份) */
@@ -321,7 +345,7 @@ func (s *GracefulServer) legadoAPIHandler(w http.ResponseWriter, r *http.Request
 	var jsonStr []byte
 	var err error
 	if isCreation == "1" {
-		jsonStr, err = genLegadoCreationJson(apiUrl, name, voiceName, styleName, styleDegree, roleName, voiceFormat)
+		jsonStr, err = genLegadoCreationJson(apiUrl, name, voiceName, voiceId, styleName, styleDegree, roleName, voiceFormat)
 	} else {
 		jsonStr, err = genLegodoJson(apiUrl, name, voiceName, styleName, styleDegree, roleName, voiceFormat)
 	}
@@ -330,6 +354,19 @@ func (s *GracefulServer) legadoAPIHandler(w http.ResponseWriter, r *http.Request
 	} else {
 		w.Write(jsonStr)
 	}
+}
+
+/* 发音人数据 */
+func (s *GracefulServer) creationVoicesAPIHandler(w http.ResponseWriter, r *http.Request) {
+	token, err := creation.GetToken()
+	if err != nil {
+		writeErrorData(w, http.StatusInternalServerError, "获取Token失败: "+err.Error())
+	}
+	data, err := creation.GetVoices(token)
+	if err != nil {
+		writeErrorData(w, http.StatusInternalServerError, "获取Voices失败: "+err.Error())
+	}
+	w.Write(data)
 }
 
 /* 生成阅读APP朗读朗读引擎Json (Edge, Azure) */
@@ -356,17 +393,16 @@ func genLegodoJson(api, name, voiceName, styleName, styleDegree, roleName, voice
 }
 
 /* 生成阅读APP朗读引擎Json (Creation) */
-func genLegadoCreationJson(api, name, voiceName, styleName, styleDegree, roleName, voiceFormat string) ([]byte, error) {
+func genLegadoCreationJson(api, name, voiceName, voiceId, styleName, styleDegree, roleName, voiceFormat string) ([]byte, error) {
 	t := time.Now().UnixNano() / 1e6 //毫秒时间戳
 	urlJsonStr := `{"text":"{{String(speakText).replace(/&/g, '&amp;').replace(/\"/g, '&quot;').replace(/'/g, '&apos;').replace(/</g, '&lt;').replace(/>/g, '&gt;')}}","voiceName":"` +
-		voiceName + `","rate":"{{(speakSpeed -10) * 2}}%","style":"` + styleName + `","styleDegree":"` + styleDegree +
+		voiceName + `","voiceId":"` + voiceId + `","rate":"{{(speakSpeed -10) * 2}}%","style":"` + styleName + `","styleDegree":"` + styleDegree +
 		`","role":"` + roleName + `","volume":"0%","format":"` + voiceFormat + `"}`
 	url := api + `,{"method":"POST","body":` + urlJsonStr + `}`
 	head := `{"Content-Type":"application/json"}`
+
 	legadoJson := &LegadoJson{Name: name, URL: url, ID: t, LastUpdateTime: t, ContentType: formatContentType(voiceFormat), Header: head}
-
 	body, err := json.Marshal(legadoJson)
-
 	return body, err
 }
 
@@ -409,6 +445,7 @@ type LegadoJson struct {
 type CreationJson struct {
 	Text        string `json:"text"`
 	VoiceName   string `json:"voiceName"`
+	VoiceId     string `json:"voiceId"`
 	Rate        string `json:"rate"`
 	Style       string `json:"style"`
 	StyleDegree string `json:"styleDegree"`
