@@ -291,7 +291,6 @@
         //对语言列表进行排序
         const sortMap = new Map([...localeList.entries()].sort((a, b) => a[1].localeCompare(b[1])));
         sortMap.forEach((value, key) => {
-            console.log(key, value)
             let langOption = document.createElement('option');
             langOption.value = key
             langOption.innerText = value
@@ -332,7 +331,6 @@
         //对发音人列表进行排序
         const sortMap = new Map([...voiceMap.entries()].sort((a, b) => a[1].localeCompare(b[1])));
         sortMap.forEach((value, key) => {
-            console.log(key, value)
             let option = document.createElement('option');
             option.value = key
             option.innerText = value
@@ -369,16 +367,19 @@
         }
 
         let roleElement = document.getElementsByName("roleName")[0]
-        let roleList = voice['RolePlayList']
+        let roleList = voice['properties']['VoiceRoleNames'].split(',')
         roleElement.innerHTML = "<option value=\"default\">默认</option>"
         if (roleList) {
             roleElement.disabled = false
             roleList.forEach(role => {
-                let option = document.createElement('option')
-                option.value = role
-                option.innerText = cnLocal[role] || role
-                roleElement.appendChild(option)
-            })
+                    if (role.length > 0 && role !== 'Default') {
+                        let option = document.createElement('option')
+                        option.value = role
+                        option.innerText = cnLocal[role] || role
+                        roleElement.appendChild(option)
+                    }
+                }
+            )
         } else {
             roleElement.disabled = true
         }
