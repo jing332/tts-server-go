@@ -259,13 +259,21 @@ func (s *GracefulServer) azureAPIHandler(w http.ResponseWriter, r *http.Request)
 }
 
 var ttsCreation *creation.Creation
+var creationLastRequestTime time.Time
 
 func (s *GracefulServer) creationAPIHandler(w http.ResponseWriter, r *http.Request) {
 	s.creationLock.Lock()
 	defer s.creationLock.Unlock()
 	defer r.Body.Close()
 
-	startTime := time.Now()
+	/* 限制两次请求间隔时间 */
+	interval := time.Now().Unix() - creationLastRequestTime.Unix()
+	if interval <= 2 { /* 两次请求间隔小于等于2s */
+		time.Sleep(time.Duration(interval) * time.Second)
+	}
+	creationLastRequestTime = time.Now()
+
+	startTime := creationLastRequestTime
 	body, _ := io.ReadAll(r.Body)
 	text := string(body)
 	log.Infoln("接收到Json(Creation): ", text)
@@ -293,7 +301,7 @@ func (s *GracefulServer) creationAPIHandler(w http.ResponseWriter, r *http.Reque
 	}
 
 	var data []byte
-	if reqData.VoiceId == "" { /* 无VoiceId 向下兼容*/
+	if reqData.VoiceId == "" { /* 无VoiceId，向下兼容*/
 		data, err = ttsCreation.GetAudioNoVoiceId(arg)
 	} else {
 		data, err = ttsCreation.GetAudio(arg)
@@ -310,7 +318,6 @@ func (s *GracefulServer) creationAPIHandler(w http.ResponseWriter, r *http.Reque
 	}
 
 	log.Infof("耗时: %dms\n", time.Since(startTime).Milliseconds())
-	time.Sleep(time.Second * 2) /* 等待2s 防止请求过于密集 */
 }
 
 /* 写入音频数据到客户端(阅读APP) */
