@@ -51,8 +51,16 @@
         </div>
         <div class="row">
             <div class="col">
+                <label for="language" class="form-label">语言：</label>
+                <select name="language" class="form-select" onchange="updateLanguageConfig()">
+                </select>
+                <div class="form-text">选择所用语言</div>
+            </div>
+        </div>
+        <div class="row">
+            <div class="col">
                 <label for="voiceName" class="form-label">声音：</label>
-                <select name="voiceName" class="form-select" onchange="updateConfigName()">
+                <select name="voiceName" class="form-select" onchange="updateVoiceConfig()">
                 </select>
                 <div class="form-text">声音列表加载可能有点慢，请稍等一下！</div>
             </div>
@@ -198,7 +206,7 @@
         }
     }
 
-    //汉化 来自: https://toolb.cn/textspeech
+    //汉化 修改自: https://toolb.cn/textspeech
     let cnLocal = {
         'general': '普通',
         'assistant': '助手',
@@ -245,7 +253,16 @@
         'SeniorMale': '高龄男性',
         'Girl': '小女孩',
         'Boy': '小男孩',
-        'Narrator': '旁白'
+        'Narrator': '旁白',
+        //语言:
+        'zh-CN': '*中文（简体)',
+        'zh-TW': '中文（台湾）',
+        'zh-HK': '中文（香港）',
+        'zh-CN-henan': '中文（方言-河南）',
+        'zh-CN-liaoning': '中文（方言-辽宁）',
+        'zh-CN-shaanxi': '中文（方言-陕西）',
+        'zh-CN-shandong': '中文（方言-山东）',
+        'zh-CN-sichuan': '中文（方言-四川）'
     }
 
     let voices = {};
@@ -267,16 +284,26 @@
     function refreshVoice(data) {
         let voiceElement = document.getElementsByName('voiceName')[0];
         voiceElement.innerHTMl = '';
+        let langElement = document.getElementsByName('language')[0]
+        langElement.innerHTML = ''
+        let localeList = new Map()
         data.forEach(item => {
-            if (['zh-CN', 'zh-TW', 'zh-HK'].includes(item['Locale'])) {
-                let option = document.createElement('option');
-                option.value = item['ShortName'];
-                option.innerText = (item['LocalName'] ?? item['ShortName']) + '-' + item['LocaleName'];
-                voiceElement.appendChild(option);
-                voices[item['ShortName']] = item;
+            voices[item['ShortName']] = item;
+            let locale = item['Locale']
+            if (!localeList.has(locale)) {
+                localeList.set(locale, cnLocal[locale] || item['LocaleName'])
             }
         });
-        updateConfigName();
+        //排序
+        const sortMap = new Map([...localeList.entries()].sort((a, b) => a[1].localeCompare(b[1])));
+        sortMap.forEach((value, key) => {
+            let langOption = document.createElement('option');
+            langOption.value = key
+            langOption.innerText = value
+            langElement.appendChild(langOption)
+        })
+
+        updateLanguageConfig();
     }
 
     function getSelectedText(elementName) {
@@ -294,7 +321,22 @@
         document.getElementsByName('name')[0].value = '微软TTS（' + voice['LocalName'] + '-' + styleName + '-' + roleName + '）';
     }
 
-    function updateConfigName() {
+    function updateLanguageConfig() {
+        let language = document.getElementsByName('language')[0].value;
+        let voiceElement = document.getElementsByName('voiceName')[0]
+        voiceElement.innerHTML = ''
+        voices.forEach(value => {
+            if (value['Locale'] === language) {
+                let option = document.createElement('option');
+                option.value = value['ShortName'];
+                option.innerText = value['LocalName'] + ' (' + value['DisplayName'] + ')'
+                voiceElement.append(option)
+            }
+        })
+        updateVoiceConfig()
+    }
+
+    function updateVoiceConfig() {
         let voiceName = document.getElementsByName('voiceName')[0].value;
         let voice = voices[voiceName];
         let styleElement = document.getElementsByName('styleName')[0]
@@ -303,6 +345,7 @@
         option.value = 'general';
         option.innerText = '普通';
         styleElement.appendChild(option);
+
         let styleList = voice['StyleList']
         if (styleList) {
             styleList.forEach(style => {
