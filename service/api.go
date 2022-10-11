@@ -377,6 +377,7 @@ func (s *GracefulServer) creationVoicesAPIHandler(w http.ResponseWriter, r *http
 	if err != nil {
 		writeErrorData(w, http.StatusInternalServerError, "获取Voices失败: "+err.Error())
 	}
+	w.Header().Set("cache-control", "public, max-age=3600, s-maxage=3600")
 	w.Write(data)
 }
 
@@ -386,6 +387,7 @@ func (s *GracefulServer) azureVoicesAPIHandler(w http.ResponseWriter, r *http.Re
 		writeErrorData(w, http.StatusInternalServerError, err.Error())
 	}
 
+	w.Header().Set("cache-control", "public, max-age=3600, s-maxage=3600")
 	w.Write(data)
 }
 
