@@ -12,8 +12,10 @@
 <body>
 <nav class="navbar navbar-expand-lg navbar-light bg-light">
     <div class="container-fluid">
-        <a class="navbar-brand github-button" href="https://github.com/jing332/tts-server-go" data-size="large" data-show-count="true" aria-label="Star jing332/tts-server-go on GitHub">Star tts-server-go</a>
-        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarSupportedContent" aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
+        <a class="navbar-brand github-button" href="https://github.com/jing332/tts-server-go" data-size="large"
+           data-show-count="true" aria-label="Star jing332/tts-server-go on GitHub">Star tts-server-go</a>
+        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarSupportedContent"
+                aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
             <span class="navbar-toggler-icon"></span>
         </button>
         <div class="collapse navbar-collapse" id="navbarSupportedContent">
@@ -34,6 +36,14 @@
                 <label for="name" class="form-label">配置名称：</label>
                 <input name="name" type="text" class="form-control" value="大声朗读1233"/>
                 <div class="form-text">在阅读APP中显示的名称。</div>
+            </div>
+        </div>
+        <div class="row">
+            <div class="col">
+                <label for="language" class="form-label">语言：</label>
+                <select name="language" class="form-select" onchange="updateLanguageConfig()">
+                </select>
+                <div class="form-text">选择所用语言</div>
             </div>
         </div>
         <div class="row">
@@ -141,6 +151,15 @@
         }
     }
 
+    let cnLocal = {
+        //语言:
+        'Chinese (Mainland)': '*中文（简体）',
+        'Chinese (Taiwan)': '中文（台湾）',
+        'Chinese (Taiwanese Mandarin)': '中文（台湾）', //与TW的语言key相同
+        'Chinese (Hong Kong)': '中文（香港）',
+        'Chinese (Cantonese Traditional)': '中文（香港）' //与HK的语言Key相同
+    }
+
     let voices = [];
     fetch('https://speech.platform.bing.com/consumer/speech/synthesize/readaloud/voices/list?trustedclienttoken=6A5AA1D4EAFF4E9FB37E23D68491D6F4')
         .then(response => {
@@ -158,17 +177,57 @@
     });
 
     function refreshVoice() {
-        let voiceElelement = document.getElementsByName('voiceName')[0];
-        voiceElelement.innerHTMl = '';
+        let langElement = document.getElementsByName('language')[0]
+        langElement.innerHTML = ''
+        let localeList = new Map()
         voices.forEach(item => {
-            if (item['FriendlyName'].indexOf('Chinese') >= 0) {
-                let option = document.createElement('option');
-                option.value = item['ShortName'];
-                option.innerText = item['FriendlyName'];
-                voiceElelement.append(option)
+            let friendlyName = item['FriendlyName']
+            let locale = item['Locale']
+            if (!localeList.has(locale)) {
+                let displayLocale = friendlyName.split('- ')[1]
+                localeList.set(locale, cnLocal[displayLocale] || displayLocale)
             }
         });
-        updateConfigName();
+        //排序
+        const sortMap = new Map([...localeList.entries()].sort((a, b) => a[1].localeCompare(b[1])));
+        sortMap.forEach((value, key) => {
+            let langOption = document.createElement('option');
+            langOption.value = key
+            langOption.innerText = value
+            langElement.appendChild(langOption)
+        })
+
+        updateLanguageConfig()
+    }
+
+    function updateLanguageConfig() {
+        let voiceElement = document.getElementsByName('voiceName')[0];
+        let language = document.getElementsByName('language')[0].value
+        voiceElement.innerHTML = ''
+        let voiceMap = new Map()
+        voices.forEach(function (value, key) {
+            if (value['locale'] === language) {
+                let pro = value['properties']
+                voiceMap.set(value['shortName'], (pro['LocalName'] ?? pro['ShortName']) + '-' + pro['LocaleDescription'])
+            }
+        })
+
+        updateVoiceConfig()
+    }
+
+    function updateVoiceConfig() {
+        let voiceElement = document.getElementsByName('voiceName')[0];
+        let language = document.getElementsByName('language')[0].value;
+        voiceElement.innerHTMl = '';
+        voices.forEach(value => {
+            if (value['Locale'] === language) {
+                let option = document.createElement('option');
+                option.value = value['ShortName'];
+                option.innerText = value['FriendlyName'];
+                voiceElement.append(option)
+            }
+        })
+        updateConfigName()
     }
 
     function updateConfigName() {
