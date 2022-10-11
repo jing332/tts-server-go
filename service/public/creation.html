@@ -247,14 +247,14 @@
         'Boy': '小男孩',
         'Narrator': '旁白',
         //语言:
-        'Chinese (Mainland)': '*中文（简体）',
-        'Chinese (Hong Kong)': '中文（香港）',
-        'Chinese (Taiwan)': '中文（台湾）',
-        'zh-CN-henan': '中文（河南）',
-        'zh-CN-liaoning': '中文（辽宁）',
-        'zh-CN-shaanxi': '中文（山西）',
-        'zh-CN-shandong': '中文（山东）',
-        'zh-CN-sichuan': '中文（四川）'
+        'zh-CN': '*中文（简体)',
+        'zh-TW': '中文（台湾）',
+        'zh-HK': '中文（香港）',
+        'zh-CN-henan': '中文（方言-河南）',
+        'zh-CN-liaoning': '中文（方言-辽宁）',
+        'zh-CN-shaanxi': '中文（方言-陕西）',
+        'zh-CN-shandong': '中文（方言-山东）',
+        'zh-CN-sichuan': '中文（方言-四川）'
     }
 
     let voices = {};
@@ -284,8 +284,7 @@
             let pro = item['properties']
             voices[pro['ShortName']] = item;
             if (!localeList.has(locale)) {
-                let localeDesp = pro['LocaleDescription']
-                localeList.set(locale, cnLocal[localeDesp] || localeDesp)
+                localeList.set(locale, cnLocal[locale] || pro['LocaleDescription'])
             }
         });
 
@@ -325,7 +324,7 @@
         voices.forEach(function (value, key) {
             if (value['locale'] === language) {
                 let pro = value['properties']
-                voiceMap.set(value['shortName'], (pro['LocalName'] ?? pro['ShortName']) + '-' + pro['LocaleDescription'])
+                voiceMap.set(value['shortName'], (pro['LocalName'] ?? pro['ShortName']) + ' (' + pro['DisplayName'] + ')')
             }
         })
 
@@ -345,7 +344,6 @@
 
     /* 发音人信息UI变更时调用 */
     function updateVoiceConfig() {
-        // updateLanguageConfig()
         let voiceName = document.getElementsByName('voiceName')[0].value;
         let voice = voices[voiceName];
         let styleElement = document.getElementsByName('styleName')[0]

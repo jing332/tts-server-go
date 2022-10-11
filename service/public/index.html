@@ -153,11 +153,9 @@
 
     let cnLocal = {
         //语言:
-        'Chinese (Mainland)': '*中文（简体）',
-        'Chinese (Taiwan)': '中文（台湾）',
-        'Chinese (Taiwanese Mandarin)': '中文（台湾）', //与TW的语言key相同
-        'Chinese (Hong Kong)': '中文（香港）',
-        'Chinese (Cantonese Traditional)': '中文（香港）' //与HK的语言Key相同
+        'zh-CN': '*中文（简体)',
+        'zh-TW': '中文（台湾）',
+        'zh-HK': '中文（香港）',
     }
 
     let voices = [];
@@ -184,8 +182,7 @@
             let friendlyName = item['FriendlyName']
             let locale = item['Locale']
             if (!localeList.has(locale)) {
-                let displayLocale = friendlyName.split('- ')[1]
-                localeList.set(locale, cnLocal[displayLocale] || displayLocale)
+                localeList.set(locale, cnLocal[locale] || friendlyName.split('- ')[1])
             }
         });
         //排序
