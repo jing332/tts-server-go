@@ -13,7 +13,6 @@ import (
 	"io"
 	"net/http"
 	"strconv"
-	"strings"
 	"sync"
 	"time"
 )
@@ -98,7 +97,7 @@ var creationHtml []byte
 
 func (s *GracefulServer) webAPIHandler(w http.ResponseWriter, r *http.Request) {
 	switch r.URL.Path {
-	case "index.html", "/":
+	case "/":
 		w.Write(indexHtml)
 	case "/azure.html":
 		w.Write(azureHtml)
@@ -258,7 +257,7 @@ func (s *GracefulServer) azureAPIHandler(w http.ResponseWriter, r *http.Request)
 	log.Infof("耗时: %dms\n", time.Since(startTime).Milliseconds())
 }
 
-var ttsCreation *creation.Creation
+var ttsCreation *creation.TTS
 var creationLastRequestTime time.Time
 
 func (s *GracefulServer) creationAPIHandler(w http.ResponseWriter, r *http.Request) {
@@ -285,26 +284,15 @@ func (s *GracefulServer) creationAPIHandler(w http.ResponseWriter, r *http.Reque
 	}
 
 	if ttsCreation == nil {
-		ttsCreation = &creation.Creation{}
+		ttsCreation = &creation.TTS{}
 	}
 
-	arg := &creation.SpeakArg{
-		Text:        reqData.Text,
-		VoiceName:   reqData.VoiceName,
-		VoiceId:     reqData.VoiceId,
-		Rate:        reqData.Rate,
-		Style:       reqData.Style,
-		StyleDegree: reqData.StyleDegree,
-		Role:        reqData.Role,
-		Volume:      reqData.Volume,
-		Format:      reqData.Format,
-	}
-
+	arg := creation.SpeakArg(reqData)
 	var data []byte
 	if reqData.VoiceId == "" { /* 无VoiceId，向下兼容*/
-		data, err = ttsCreation.GetAudioNoVoiceId(arg)
+		data, err = ttsCreation.GetAudioNoVoiceId(&arg)
 	} else {
-		data, err = ttsCreation.GetAudio(arg)
+		data, err = ttsCreation.GetAudio(&arg)
 	}
 
 	if err != nil {
@@ -384,94 +372,9 @@ func (s *GracefulServer) creationVoicesAPIHandler(w http.ResponseWriter, r *http
 func (s *GracefulServer) azureVoicesAPIHandler(w http.ResponseWriter, r *http.Request) {
 	data, err := azure.GetVoices()
 	if err != nil {
-		writeErrorData(w, http.StatusInternalServerError, err.Error())
+		writeErrorData(w, http.StatusInternalServerError, "获取Voices失败: "+err.Error())
 	}
 
 	w.Header().Set("cache-control", "public, max-age=3600, s-maxage=3600")
 	w.Write(data)
-}
-
-/* 生成阅读APP朗读朗读引擎Json (Edge, Azure) */
-func genLegodoJson(api, name, voiceName, styleName, styleDegree, roleName, voiceFormat string) ([]byte, error) {
-	t := time.Now().UnixNano() / 1e6 //毫秒时间戳
-	var url string
-	if styleName == "" { /* Edge大声朗读 */
-		url = api + ` ,{"method":"POST","body":"<speak xmlns=\"http://www.w3.org/2001/10/synthesis\" xmlns:mstts=\"http://www.w3.org/2001/mstts\" xmlns:emo=\"http://www.w3.org/2009/10/emotionml\" version=\"1.0\" xml:lang=\"en-US\"><voice name=\"` +
-			voiceName + `\"><prosody rate=\"{{(speakSpeed -10) * 2}}%\" pitch=\"+0Hz\">{{String(speakText).replace(/&/g, '&amp;').replace(/\"/g, '&quot;').replace(/'/g, '&apos;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/\\/g, '')}}</prosody></voice></speak>"}`
-	} else { /* Azure TTS */
-		url = api + ` ,{"method":"POST","body":"<speak xmlns=\"http://www.w3.org/2001/10/synthesis\" xmlns:mstts=\"http://www.w3.org/2001/mstts\" xmlns:emo=\"http://www.w3.org/2009/10/emotionml\" version=\"1.0\" xml:lang=\"en-US\"><voice name=\"` +
-			voiceName + `\"><mstts:express-as style=\"` + styleName + `\" styledegree=\"` + styleDegree + `\" role=\"` + roleName + `\"><prosody rate=\"{{(speakSpeed -10) * 2}}%\" pitch=\"+0Hz\">{{String(speakText).replace(/&/g, '&amp;').replace(/\"/g, '&quot;').replace(/'/g, '&apos;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/\\/g, '')}}</prosody> </mstts:express-as></voice></speak>"}`
-	}
-
-	head := `{"Content-Type":"text/plain","Authorization":"Bearer ","Format":"` + voiceFormat + `"}`
-	legadoJson := &LegadoJson{Name: name, URL: url, ID: t, LastUpdateTime: t, ContentType: formatContentType(voiceFormat), Header: head}
-
-	body, err := json.Marshal(legadoJson)
-	if err != nil {
-		return nil, err
-	}
-
-	return body, nil
-}
-
-/* 生成阅读APP朗读引擎Json (Creation) */
-func genLegadoCreationJson(api, name, voiceName, voiceId, styleName, styleDegree, roleName, voiceFormat string) ([]byte, error) {
-	t := time.Now().UnixNano() / 1e6 //毫秒时间戳
-	urlJsonStr := `{"text":"{{String(speakText).replace(/&/g, '&amp;').replace(/\"/g, '&quot;').replace(/'/g, '&apos;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/\\/g, '')}}","voiceName":"` +
-		voiceName + `","voiceId":"` + voiceId + `","rate":"{{(speakSpeed -10) * 2}}%","style":"` + styleName + `","styleDegree":"` + styleDegree +
-		`","role":"` + roleName + `","volume":"0%","format":"` + voiceFormat + `"}`
-	url := api + `,{"method":"POST","body":` + urlJsonStr + `}`
-	head := `{"Content-Type":"application/json"}`
-
-	legadoJson := &LegadoJson{Name: name, URL: url, ID: t, LastUpdateTime: t, ContentType: formatContentType(voiceFormat), Header: head}
-	body, err := json.Marshal(legadoJson)
-	return body, err
-}
-
-/* 根据音频格式返回对应的Content-Type */
-func formatContentType(format string) string {
-	t := strings.Split(format, "-")[0]
-	switch t {
-	case "audio":
-		return "audio/mpeg"
-	case "webm":
-		return "audio/webm; codec=opus"
-	case "ogg":
-		return "audio/ogg; codecs=opus; rate=16000"
-	case "riff":
-		return "audio/x-wav"
-	case "raw":
-		if strings.HasSuffix(format, "truesilk") {
-			return "audio/SILK"
-		} else {
-			return "audio/basic"
-		}
-	}
-	return ""
-}
-
-type LegadoJson struct {
-	ContentType    string `json:"contentType"`
-	Header         string `json:"header"`
-	ID             int64  `json:"id"`
-	LastUpdateTime int64  `json:"lastUpdateTime"`
-	Name           string `json:"name"`
-	URL            string `json:"url"`
-	//ConcurrentRate   string `json:"concurrentRate"`
-	//EnabledCookieJar bool   `json:"enabledCookieJar"`
-	//LoginCheckJs   string `json:"loginCheckJs"`
-	//LoginUI        string `json:"loginUi"`
-	//LoginURL       string `json:"loginUrl"`
-}
-
-type CreationJson struct {
-	Text        string `json:"text"`
-	VoiceName   string `json:"voiceName"`
-	VoiceId     string `json:"voiceId"`
-	Rate        string `json:"rate"`
-	Style       string `json:"style"`
-	StyleDegree string `json:"styleDegree"`
-	Role        string `json:"role"`
-	Volume      string `json:"volume"`
-	Format      string `json:"format"`
 }

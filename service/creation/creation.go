@@ -26,7 +26,7 @@ var (
 	httpStatusCodeErr = errors.New("http status code not equal 200")
 )
 
-type Creation struct {
+type TTS struct {
 	token string
 }
 
@@ -34,7 +34,7 @@ type SpeakArg struct {
 	Text, VoiceName, VoiceId, Rate, Style, StyleDegree, Role, Volume, Format string
 }
 
-func (c *Creation) GetAudio(arg *SpeakArg) (audio []byte, err error) {
+func (c *TTS) GetAudio(arg *SpeakArg) (audio []byte, err error) {
 	if c.token == "" {
 		s, err := GetToken()
 		if err != nil {
@@ -68,7 +68,7 @@ func (c *Creation) GetAudio(arg *SpeakArg) (audio []byte, err error) {
 	return audio, err
 }
 
-func (c *Creation) GetAudioNoVoiceId(arg *SpeakArg) (audio []byte, err error) {
+func (c *TTS) GetAudioNoVoiceId(arg *SpeakArg) (audio []byte, err error) {
 	id := voices.IDs[arg.VoiceName]
 	if id == "" { /* 不支持的发音人 */
 		return nil, NotSupportedVoiceErr

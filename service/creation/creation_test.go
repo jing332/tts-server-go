@@ -18,7 +18,7 @@ func TestGetAudio(t *testing.T) {
 		Volume:      "0%",
 		Format:      "audio-16khz-32kbitrate-mono-mp3",
 	}
-	c := &Creation{}
+	c := &TTS{}
 	data, err := c.GetAudio(arg)
 	if err != nil {
 		t.Fatal(err)
