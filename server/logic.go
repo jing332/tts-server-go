@@ -33,7 +33,7 @@ type CreationJson struct {
 }
 
 /* 生成阅读APP朗读朗读引擎Json (Edge, Azure) */
-func genLegodoJson(api, name, voiceName, styleName, styleDegree, roleName, voiceFormat string) ([]byte, error) {
+func genLegodoJson(api, name, voiceName, styleName, styleDegree, roleName, voiceFormat, token string) ([]byte, error) {
 	t := time.Now().UnixNano() / 1e6 //毫秒时间戳
 	var url string
 	if styleName == "" { /* Edge大声朗读 */
@@ -44,7 +44,7 @@ func genLegodoJson(api, name, voiceName, styleName, styleDegree, roleName, voice
 			voiceName + `\"><mstts:express-as style=\"` + styleName + `\" styledegree=\"` + styleDegree + `\" role=\"` + roleName + `\"><prosody rate=\"{{(speakSpeed -10) * 2}}%\" pitch=\"+0Hz\">{{String(speakText).replace(/&/g, '&amp;').replace(/\"/g, '&quot;').replace(/'/g, '&apos;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/\\/g, '')}}</prosody> </mstts:express-as></voice></speak>"}`
 	}
 
-	head := `{"Content-Type":"text/plain","Authorization":"Bearer ","Format":"` + voiceFormat + `"}`
+	head := `{"Content-Type":"text/plain","Format":"` + voiceFormat + `", "Token":"` + token + `"}`
 	legadoJson := &LegadoJson{Name: name, URL: url, ID: t, LastUpdateTime: t, ContentType: formatContentType(voiceFormat), Header: head}
 
 	body, err := json.Marshal(legadoJson)
@@ -56,13 +56,13 @@ func genLegodoJson(api, name, voiceName, styleName, styleDegree, roleName, voice
 }
 
 /* 生成阅读APP朗读引擎Json (Creation) */
-func genLegadoCreationJson(api, name, voiceName, voiceId, styleName, styleDegree, roleName, voiceFormat string) ([]byte, error) {
+func genLegadoCreationJson(api, name, voiceName, voiceId, styleName, styleDegree, roleName, voiceFormat, token string) ([]byte, error) {
 	t := time.Now().UnixNano() / 1e6 //毫秒时间戳
 	urlJsonStr := `{"text":"{{String(speakText).replace(/&/g, '&amp;').replace(/\"/g, '&quot;').replace(/'/g, '&apos;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/\\/g, '')}}","voiceName":"` +
 		voiceName + `","voiceId":"` + voiceId + `","rate":"{{(speakSpeed -10) * 2}}%","style":"` + styleName + `","styleDegree":"` + styleDegree +
 		`","role":"` + roleName + `","volume":"0%","format":"` + voiceFormat + `"}`
 	url := api + `,{"method":"POST","body":` + urlJsonStr + `}`
-	head := `{"Content-Type":"application/json"}`
+	head := `{"Content-Type":"application/json", "Token":"` + token + `"}`
 
 	legadoJson := &LegadoJson{Name: name, URL: url, ID: t, LastUpdateTime: t, ContentType: formatContentType(voiceFormat), Header: head}
 	body, err := json.Marshal(legadoJson)

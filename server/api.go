@@ -5,19 +5,21 @@ import (
 	_ "embed"
 	"encoding/json"
 	"fmt"
-	"github.com/gorilla/websocket"
-	"github.com/jing332/tts-server-go/service/azure"
-	"github.com/jing332/tts-server-go/service/creation"
-	"github.com/jing332/tts-server-go/service/edge"
-	log "github.com/sirupsen/logrus"
 	"io"
 	"net/http"
 	"strconv"
 	"sync"
 	"time"
+
+	"github.com/gorilla/websocket"
+	"github.com/jing332/tts-server-go/service/azure"
+	"github.com/jing332/tts-server-go/service/creation"
+	"github.com/jing332/tts-server-go/service/edge"
+	log "github.com/sirupsen/logrus"
 )
 
 type GracefulServer struct {
+	Token        string
 	Server       *http.Server
 	serveMux     *http.ServeMux
 	shutdownLoad chan struct{}
@@ -108,6 +110,18 @@ func (s *GracefulServer) webAPIHandler(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+func (s *GracefulServer) verifyToken(w http.ResponseWriter, r *http.Request) bool {
+	if s.Token != "" {
+		token := r.Header.Get("Token")
+		if s.Token != token {
+			w.WriteHeader(http.StatusUnauthorized)
+			w.Write([]byte("无效的Token"))
+			return false
+		}
+	}
+	return true
+}
+
 var ttsEdge *edge.TTS
 
 // Microsoft Edge 大声朗读接口
@@ -115,6 +129,10 @@ func (s *GracefulServer) edgeAPIHandler(w http.ResponseWriter, r *http.Request) 
 	s.edgeLock.Lock()
 	defer s.edgeLock.Unlock()
 	defer r.Body.Close()
+	pass := s.verifyToken(w, r)
+	if !pass {
+		return
+	}
 
 	startTime := time.Now()
 	body, _ := io.ReadAll(r.Body)
@@ -183,6 +201,10 @@ func (s *GracefulServer) azureAPIHandler(w http.ResponseWriter, r *http.Request)
 	s.azureLock.Lock()
 	defer s.azureLock.Unlock()
 	defer r.Body.Close()
+	pass := s.verifyToken(w, r)
+	if !pass {
+		return
+	}
 
 	startTime := time.Now()
 	format := r.Header.Get("Format")
@@ -264,6 +286,10 @@ func (s *GracefulServer) creationAPIHandler(w http.ResponseWriter, r *http.Reque
 	s.creationLock.Lock()
 	defer s.creationLock.Unlock()
 	defer r.Body.Close()
+	pass := s.verifyToken(w, r)
+	if !pass {
+		return
+	}
 
 	/* 限制两次请求间隔时间 */
 	interval := time.Now().Unix() - creationLastRequestTime.Unix()
@@ -340,13 +366,14 @@ func (s *GracefulServer) legadoAPIHandler(w http.ResponseWriter, r *http.Request
 	styleDegree := params.Get("styleDegree") /* 风格强度(0.1-2.0) */
 	roleName := params.Get("roleName")       /* 角色(身份) */
 	voiceFormat := params.Get("voiceFormat") /* 音频格式 */
+	token := params.Get("token")
 
 	var jsonStr []byte
 	var err error
 	if isCreation == "1" {
-		jsonStr, err = genLegadoCreationJson(apiUrl, name, voiceName, voiceId, styleName, styleDegree, roleName, voiceFormat)
+		jsonStr, err = genLegadoCreationJson(apiUrl, name, voiceName, voiceId, styleName, styleDegree, roleName, voiceFormat, token)
 	} else {
-		jsonStr, err = genLegodoJson(apiUrl, name, voiceName, styleName, styleDegree, roleName, voiceFormat)
+		jsonStr, err = genLegodoJson(apiUrl, name, voiceName, styleName, styleDegree, roleName, voiceFormat, token)
 	}
 	if err != nil {
 		writeErrorData(w, http.StatusBadRequest, err.Error())
