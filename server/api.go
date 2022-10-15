@@ -110,6 +110,7 @@ func (s *GracefulServer) webAPIHandler(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+// 验证Token true表示成功或未设置Token
 func (s *GracefulServer) verifyToken(w http.ResponseWriter, r *http.Request) bool {
 	if s.Token != "" {
 		token := r.Header.Get("Token")

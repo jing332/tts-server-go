@@ -6,382 +6,385 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet"
-        integrity="sha384-1BmE4kWBq78iYhFldvKuhfTAU6auU8tT94WrHftjDbrCEXSU1oBoqyl2QvZ6jIW3" crossorigin="anonymous">
+          integrity="sha384-1BmE4kWBq78iYhFldvKuhfTAU6auU8tT94WrHftjDbrCEXSU1oBoqyl2QvZ6jIW3" crossorigin="anonymous">
 </head>
 
 <body>
-    <nav class="navbar navbar-expand-lg navbar-light bg-light">
-        <div class="container-fluid">
-            <a class="navbar-brand github-button" href="https://github.com/jing332/tts-server-go" data-size="large"
-                data-show-count="true" aria-label="Star jing332/tts-server-go on GitHub">Star tts-server-go</a>
-            <button class="navbar-toggler" type="button" data-bs-toggle="collapse"
+<nav class="navbar navbar-expand-lg navbar-light bg-light">
+    <div class="container-fluid">
+        <a class="navbar-brand github-button" href="https://github.com/jing332/tts-server-go" data-size="large"
+           data-show-count="true" aria-label="Star jing332/tts-server-go on GitHub">Star tts-server-go</a>
+        <button class="navbar-toggler" type="button" data-bs-toggle="collapse"
                 data-bs-target="#navbarSupportedContent" aria-controls="navbarSupportedContent" aria-expanded="false"
                 aria-label="Toggle navigation">
-                <span class="navbar-toggler-icon"></span>
-            </button>
-            <div class="collapse navbar-collapse" id="navbarSupportedContent">
-                <ul class="navbar-nav me-auto mb-2 mb-lg-0">
-                    <li class="nav-item"><a class="nav-link" aria-current="page" href="/">Edge(主页)</a></li>
-                    <li class="nav-item"><a class="nav-link active" href="/azure.html">Azure</a></li>
-                    <li class="nav-item"><a class="nav-link" href="/creation.html">Creation</a></li>
-
-                </ul>
-                <p class="fst-italic">本页面源码修改自 <a href="https://github.com/wxxxcxx/ms-ra-forwarder">ms-ra-forwarder</a>
-                </p>
+            <span class="navbar-toggler-icon"></span>
+        </button>
+        <div class="collapse navbar-collapse" id="navbarSupportedContent">
+            <ul class="navbar-nav me-auto mb-2 mb-lg-0">
+                <li class="nav-item"><a class="nav-link"href="/">Edge接口</a></li>
+                <li class="nav-item"><a class="nav-link active" href="/azure.html">Azure接口</a></li>
+                <li class="nav-item"><a class="nav-link" href="/creation.html">Creation接口</a></li>
+            </ul>
+            <p class="fst-italic">本页面源码修改自 <a href="https://github.com/wxxxcxx/ms-ra-forwarder">ms-ra-forwarder</a>
+            </p>
+        </div>
+    </div>
+</nav>
+<div class="container" style="margin-top: 10px;">
+    <div class="row">
+        <div class="col">
+            <div class="alert alert-warning" role="alert">
+                Azure是<a href="https://azure.microsoft.com/zh-cn/services/cognitive-services/text-to-speech/"
+                         target="_blank">Azure 演示页面</a>的接口。
+                <br>
+                有Bug请提
+                <a href="https://github.com/jing332/tts-server-go/issues/new">issue</a>。
             </div>
         </div>
-    </nav>
-    <div class="container" style="margin-top: 10px;">
+    </div>
+    <form>
         <div class="row">
             <div class="col">
-                <div class="alert alert-warning" role="alert">
-                    Azure是<a href="https://azure.microsoft.com/zh-cn/services/cognitive-services/text-to-speech/"
-                        target="_blank">Azure 演示页面</a>的接口。
-                    <br>
-                    有Bug请提
-                    <a href="https://github.com/jing332/tts-server-go/issues/new">issue</a>。
+                <label for="name" class="form-label">配置名称：</label>
+                <input name="name" type="text" class="form-control" value="微软TTS"/>
+                <div class="form-text">在阅读APP中显示的名称。</div>
+            </div>
+        </div>
+        <div class="row">
+            <div class="col">
+                <label for="language" class="form-label">语言：</label>
+                <select name="language" class="form-select" onchange="updateLanguageConfig()">
+                </select>
+                <div class="form-text">选择所用语言</div>
+            </div>
+        </div>
+        <div class="row">
+            <div class="col">
+                <label for="voiceName" class="form-label">声音：</label>
+                <select name="voiceName" class="form-select" onchange="updateVoiceConfig()">
+                </select>
+                <div class="form-text">声音列表加载可能有点慢，请稍等一下！</div>
+            </div>
+        </div>
+        <div class="row">
+            <div class="col">
+                <label for="styleName" class="form-label">风格：</label>
+                <select name="styleName" class="form-select" onchange="updateName()">
+                    <option value="general">普通</option>
+                </select>
+                <div class="form-text">指定讲话风格。 说话风格特定于语音。</div>
+            </div>
+            <div class="col">
+                <label for="styleDegree" class="form-label">风格强度：</label>
+                <input name="styleDegree" class="form-control" type="number" min="0.1" max="2.0" step="0.1"
+                       value="1.0">
+                <div class="form-text">指定说话风格的强度。 接受的值：0.01 到 2（含边界值）。 默认值为 1，表示预定义的风格强度。 最小单位为 0.01，表示略倾向于目标风格。 值为
+                    2
+                    表示是默认风格强度的两倍。
+                </div>
+            </div>
+            <div class="col">
+                <label for="roleName" class="form-label">角色：</label>
+                <select name="roleName" class="form-select" disabled="disabled" onchange="updateName()">
+                    <option value="default">默认</option>
+                </select>
+                <div class="form-text">指定角色扮演。如云希的旁白/小男孩。</div>
+            </div>
+        </div>
+        <div class="row">
+            <div class="col">
+                <label for="voiceFormat" class="form-label">音频格式：</label>
+                <select name="voiceFormat" class="form-select">
+                    <option value="raw-16khz-16bit-mono-pcm">raw-16khz-16bit-mono-pcm</option>
+                    <option value="raw-48khz-16bit-mono-pcm">raw-48khz-16bit-mono-pcm</option>
+                    <option value="raw-8khz-8bit-mono-mulaw">raw-8khz-8bit-mono-mulaw</option>
+                    <option value="raw-8khz-8bit-mono-alaw">raw-8khz-8bit-mono-alaw</option>
+                    <option value="raw-16khz-16bit-mono-truesilk">raw-16khz-16bit-mono-truesilk</option>
+                    <option value="raw-24khz-16bit-mono-truesilk">raw-24khz-16bit-mono-truesilk</option>
+                    <option value="riff-16khz-16bit-mono-pcm">riff-16khz-16bit-mono-pcm</option>
+                    <option value="riff-24khz-16bit-mono-pcm">riff-24khz-16bit-mono-pcm</option>
+                    <option value="riff-48khz-16bit-mono-pcm">riff-48khz-16bit-mono-pcm</option>
+                    <option value="riff-8khz-8bit-mono-mulaw">riff-8khz-8bit-mono-mulaw</option>
+                    <option value="riff-8khz-8bit-mono-alaw">riff-8khz-8bit-mono-alaw</option>
+                    <option value="audio-16khz-32kbitrate-mono-mp3" selected>audio-16khz-32kbitrate-mono-mp3
+                    </option>
+                    <option value="audio-16khz-64kbitrate-mono-mp3">audio-16khz-64kbitrate-mono-mp3</option>
+                    <option value="audio-16khz-128kbitrate-mono-mp3">audio-16khz-128kbitrate-mono-mp3</option>
+                    <option value="audio-24khz-48kbitrate-mono-mp3">audio-24khz-48kbitrate-mono-mp3</option>
+                    <option value="audio-24khz-96kbitrate-mono-mp3">audio-24khz-96kbitrate-mono-mp3</option>
+                    <option value="audio-24khz-160kbitrate-mono-mp3">audio-24khz-160kbitrate-mono-mp3</option>
+                    <option value="audio-48khz-96kbitrate-mono-mp3">audio-48khz-96kbitrate-mono-mp3</option>
+                    <option value="audio-48khz-192kbitrate-mono-mp3">audio-48khz-192kbitrate-mono-mp3</option>
+                    <option value="webm-16khz-16bit-mono-opus">webm-16khz-16bit-mono-opus</option>
+                    <option value="webm-24khz-16bit-mono-opus">webm-24khz-16bit-mono-opus</option>
+                    <option value="ogg-16khz-16bit-mono-opus">ogg-16khz-16bit-mono-opus</option>
+                    <option value="ogg-24khz-16bit-mono-opus">ogg-24khz-16bit-mono-opus</option>
+                    <option value="ogg-48khz-16bit-mono-opus">ogg-48khz-16bit-mono-opus</option>
+                </select>
+                <div class="form-text">
+                    <p>可以调整音频的格式和质量。质量越高，生成的文件越大，对网速和流量的需求越高。请根据自己的情况选择。</p>
+                    <p>如果出现 “Unsupported output format: XXX” 错误，表示不支持当前格式。</p>
+                </div>
+            </div>
+
+            <div class="row">
+                <div>
+                    <label for="token" class="form-label">凭据（TOKEN）：</label>
+                    <input name="token" class="form-control" type="text" value="">
+                    <div class="form-text">如果没有设置 TOKEN 环境变量请留空。</div>
+                </div>
+            </div>
+
+            <div class="row">
+                <div class="col">
+                    <label for="previewText" class="form-label">测试文本：</label>
+                    <textarea name="previewText" class="form-control" rows="3"
+                              cols="">如果喜欢这个项目的话请点个 Star 吧。</textarea>
+                </div>
+            </div>
+            <div style="height:20px"></div>
+            <div class="row">
+                <div class="col">
+                    <label class="text-success" id="audioInfoLabel">大小: 0kb | 耗时: 0ms</label>
+                </div>
+            </div>
+            <div class="row">
+                <div class="col">
+                    <button id="previewButton" type="button" class="btn btn-secondary"
+                            onclick="preview()">测试
+                    </button>
+                    <button type="button" class="btn btn-primary" onclick='createLegadoUrl()'>生成阅读（legado）语音引擎链接
+                    </button>
                 </div>
             </div>
         </div>
-        <form>
-            <div class="row">
-                <div class="col">
-                    <label for="name" class="form-label">配置名称：</label>
-                    <input name="name" type="text" class="form-control" value="微软TTS" />
-                    <div class="form-text">在阅读APP中显示的名称。</div>
-                </div>
-            </div>
-            <div class="row">
-                <div class="col">
-                    <label for="language" class="form-label">语言：</label>
-                    <select name="language" class="form-select" onchange="updateLanguageConfig()">
-                    </select>
-                    <div class="form-text">选择所用语言</div>
-                </div>
-            </div>
-            <div class="row">
-                <div class="col">
-                    <label for="voiceName" class="form-label">声音：</label>
-                    <select name="voiceName" class="form-select" onchange="updateVoiceConfig()">
-                    </select>
-                    <div class="form-text">声音列表加载可能有点慢，请稍等一下！</div>
-                </div>
-            </div>
-            <div class="row">
-                <div class="col">
-                    <label for="styleName" class="form-label">风格：</label>
-                    <select name="styleName" class="form-select" onchange="updateName()">
-                        <option value="general">普通</option>
-                    </select>
-                    <div class="form-text">指定讲话风格。 说话风格特定于语音。</div>
-                </div>
-                <div class="col">
-                    <label for="styleDegree" class="form-label">风格强度：</label>
-                    <input name="styleDegree" class="form-control" type="number" min="0.1" max="2.0" step="0.1"
-                        value="1.0">
-                    <div class="form-text">指定说话风格的强度。 接受的值：0.01 到 2（含边界值）。 默认值为 1，表示预定义的风格强度。 最小单位为 0.01，表示略倾向于目标风格。 值为
-                        2
-                        表示是默认风格强度的两倍。
-                    </div>
-                </div>
-                <div class="col">
-                    <label for="roleName" class="form-label">角色：</label>
-                    <select name="roleName" class="form-select" disabled="disabled" onchange="updateName()">
-                        <option value="default">默认</option>
-                    </select>
-                    <div class="form-text">指定角色扮演。如云希的旁白/小男孩。</div>
-                </div>
-            </div>
-            <div class="row">
-                <div class="col">
-                    <label for="voiceFormat" class="form-label">音频格式：</label>
-                    <select name="voiceFormat" class="form-select">
-                        <option value="raw-16khz-16bit-mono-pcm">raw-16khz-16bit-mono-pcm</option>
-                        <option value="raw-48khz-16bit-mono-pcm">raw-48khz-16bit-mono-pcm</option>
-                        <option value="raw-8khz-8bit-mono-mulaw">raw-8khz-8bit-mono-mulaw</option>
-                        <option value="raw-8khz-8bit-mono-alaw">raw-8khz-8bit-mono-alaw</option>
-                        <option value="raw-16khz-16bit-mono-truesilk">raw-16khz-16bit-mono-truesilk</option>
-                        <option value="raw-24khz-16bit-mono-truesilk">raw-24khz-16bit-mono-truesilk</option>
-                        <option value="riff-16khz-16bit-mono-pcm">riff-16khz-16bit-mono-pcm</option>
-                        <option value="riff-24khz-16bit-mono-pcm">riff-24khz-16bit-mono-pcm</option>
-                        <option value="riff-48khz-16bit-mono-pcm">riff-48khz-16bit-mono-pcm</option>
-                        <option value="riff-8khz-8bit-mono-mulaw">riff-8khz-8bit-mono-mulaw</option>
-                        <option value="riff-8khz-8bit-mono-alaw">riff-8khz-8bit-mono-alaw</option>
-                        <option value="audio-16khz-32kbitrate-mono-mp3" selected>audio-16khz-32kbitrate-mono-mp3
-                        </option>
-                        <option value="audio-16khz-64kbitrate-mono-mp3">audio-16khz-64kbitrate-mono-mp3</option>
-                        <option value="audio-16khz-128kbitrate-mono-mp3">audio-16khz-128kbitrate-mono-mp3</option>
-                        <option value="audio-24khz-48kbitrate-mono-mp3">audio-24khz-48kbitrate-mono-mp3</option>
-                        <option value="audio-24khz-96kbitrate-mono-mp3">audio-24khz-96kbitrate-mono-mp3</option>
-                        <option value="audio-24khz-160kbitrate-mono-mp3">audio-24khz-160kbitrate-mono-mp3</option>
-                        <option value="audio-48khz-96kbitrate-mono-mp3">audio-48khz-96kbitrate-mono-mp3</option>
-                        <option value="audio-48khz-192kbitrate-mono-mp3">audio-48khz-192kbitrate-mono-mp3</option>
-                        <option value="webm-16khz-16bit-mono-opus">webm-16khz-16bit-mono-opus</option>
-                        <option value="webm-24khz-16bit-mono-opus">webm-24khz-16bit-mono-opus</option>
-                        <option value="ogg-16khz-16bit-mono-opus">ogg-16khz-16bit-mono-opus</option>
-                        <option value="ogg-24khz-16bit-mono-opus">ogg-24khz-16bit-mono-opus</option>
-                        <option value="ogg-48khz-16bit-mono-opus">ogg-48khz-16bit-mono-opus</option>
-                    </select>
-                    <div class="form-text">
-                        <p>可以调整音频的格式和质量。质量越高，生成的文件越大，对网速和流量的需求越高。请根据自己的情况选择。</p>
-                        <p>如果出现 “Unsupported output format: XXX” 错误，表示不支持当前格式。</p>
-                    </div>
-                </div>
-
-                <div class="row">
-                    <div>
-                        <label for="token" class="form-label">凭据（TOKEN）：</label>
-                        <input name="token" class="form-control" type="text" value="">
-                        <div class="form-text">如果没有设置 TOKEN 环境变量请留空。</div>
-                    </div>
-                </div>
-
-                <div class="row">
-                    <div class="col">
-                        <label for="previewText" class="form-label">测试文本：</label>
-                        <textarea name="previewText" class="form-control" rows="3"
-                            cols="">如果喜欢这个项目的话请点个 Star 吧。</textarea>
-                    </div>
-                </div>
-                <div style="height:20px"></div>
-                <div class="row">
-                    <div class="col">
-                        <label class="text-success" id="audioInfoLabel">大小: 0kb | 耗时: 0ms</label>
-                    </div>
-                </div>
-                <div class="row">
-                    <div class="col">
-                        <button id="previewButton" type="button" class="btn btn-secondary"
-                            onclick="preview()">测试</button>
-                        <button type="button" class="btn btn-primary" onclick='createLegadoUrl()'>生成阅读（legado）语音引擎链接
-                        </button>
-                    </div>
-                </div>
-            </div>
-        </form>
-        <div style="height:50px"></div>
-    </div>
+    </form>
+    <div style="height:50px"></div>
+</div>
 
 
-    <div id="legadoUrlModal" class="modal " tabindex="-1">
-        <div class="modal-dialog modal-lg">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title">阅读链接</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+<div id="legadoUrlModal" class="modal " tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">阅读链接</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div id="legadoUrlQRCode" style="text-align:center">
                 </div>
-                <div class="modal-body">
-                    <div id="legadoUrlQRCode" style="text-align:center">
-                    </div>
-                    <div style="height:10px"></div>
-                    <div style="text-align: center">
+                <div style="height:10px"></div>
+                <div class="row">
+                    <div class="col" style="text-align: center">
                         <button id="copyButton" class="btn btn-primary" onclick="copy()">一键复制</button>
+                        <button id="importButton" class="btn btn-primary" onclick="openAppImport()">一键导入</button>
                     </div>
-                    <div style="height:10px"></div>
-                    <textarea id="legadoUrl" class="form-control" readonly rows="3" cols="2" value></textarea>
-                    <div>
-                    </div>
-                    <div class="alert alert-primary" role="alert">
-                        请在阅读的朗读引擎设置中选择网络导入此链接。
-                    </div>
+                </div>
+                <div style="height:10px"></div>
+                <textarea id="legadoUrl" class="form-control" readonly rows="3" cols="2"></textarea>
+                <div>
+                </div>
+                <div class="alert alert-primary" role="alert">
+                    请在阅读的朗读引擎设置中选择网络导入此链接。
                 </div>
             </div>
         </div>
     </div>
-    <script src="https://cdn.jsdelivr.net/npm/github-buttons@2.22.0/dist/buttons.min.js"
+</div>
+<script src="https://cdn.jsdelivr.net/npm/github-buttons@2.22.0/dist/buttons.min.js"
         integrity="sha256-zBTHKVsRTDK5S/yvjJBOI9aarZKLhveQ0i53mMIPbe0=" crossorigin="anonymous"></script>
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"
         integrity="sha384-ka7Sk0Gln4gmtz2MlQnikT1wXgYsOg+OMhuP+IlRH9sENBO0LRn5q+8nbTov4+1p"
         crossorigin="anonymous"></script>
-    <script src="https://cdn.jsdelivr.net/npm/qrcode-svg@1.1.0/lib/qrcode.min.js"></script>
-    <script>
-        function copy() {
-            setTimeout(function () {
-                document.getElementById("copyButton").innerText = "一键复制"
-            }, 3000)
+<script src="https://cdn.jsdelivr.net/npm/qrcode-svg@1.1.0/lib/qrcode.min.js"></script>
+<script>
+    function copy() {
+        setTimeout(function () {
+            document.getElementById("copyButton").innerText = "一键复制"
+        }, 3000)
 
-            try {
-                document.getElementById("legadoUrl").select()
-                var sussced = document.execCommand("copy")
-                if (sussced) {
-                    document.getElementById("copyButton").innerText = "已复制到剪贴板"
-                } else {
-                    document.getElementById("copyButton").innerText = "复制失败 请手动复制"
-                }
-            } catch (e) {
+        try {
+            document.getElementById("legadoUrl").select()
+            var sussced = document.execCommand("copy")
+            if (sussced) {
+                document.getElementById("copyButton").innerText = "已复制到剪贴板"
+            } else {
                 document.getElementById("copyButton").innerText = "复制失败 请手动复制"
             }
+        } catch (e) {
+            document.getElementById("copyButton").innerText = "复制失败 请手动复制"
         }
+    }
 
-        //汉化 修改自: https://toolb.cn/textspeech
-        let cnLocal = {
-            'general': '普通',
-            'assistant': '助手',
-            'chat': '闲聊',
-            'customerservice': '服侍',
-            'newscast': '新闻播报',
-            'newscast-casual': '新闻播报(冷淡)',
-            'affectionate': '温暖亲切',
-            'angry': '生气',
-            'calm': '平静',
-            'cheerful': '欢快',
-            'excited': '激动',
-            'friendly': '温和',
-            'hopeful': '期待',
-            'shouting': '喊叫',
-            'terrified': '害怕',
-            'unfriendly': '冷漠',
-            'whispering': '耳语',
-            'empathetic': '同情',
-            'newscast-formal': '新闻播报(正式)',
-            'disgruntled': '不满',
-            'fearful': '担心',
-            'gentle': '温合文雅',
-            'lyrical': '热情奔放',
-            'embarrassed': '犹豫',
-            'sad': '悲伤',
-            'serious': '严肃',
-            'depressed': '忧伤',
-            'envious': '嫉妒',
-            'poetry-reading': '诗歌朗诵',
-            //角色(身份):
-            'narration-professional': '讲故事(专业)',
-            'narration-casual': '讲故事(冷淡)',
-            'narration-relaxed': '讲故事(轻松)',
-            'Narration-relaxed': '讲故事(轻松)',
-            'Sports_commentary_excited': '体育解说(激动)',
-            'Sports_commentary': '体育解说',
-            'Advertisement_upbeat': '广告推销(积极)',
-            'YoungAdultFemale': '女性青年',
-            'YoungAdultMale': '男性青年',
-            'OlderAdultFemale': '年长女性',
-            'OlderAdultMale': '年长男性',
-            'SeniorFemale': '高龄女性',
-            'SeniorMale': '高龄男性',
-            'Girl': '小女孩',
-            'Boy': '小男孩',
-            'Narrator': '旁白',
-            //语言:
-            'zh-CN': '*中文（简体)',
-            'zh-TW': '中文（台湾）',
-            'zh-HK': '中文（香港）',
-            'zh-CN-henan': '中文（方言-河南）',
-            'zh-CN-liaoning': '中文（方言-辽宁）',
-            'zh-CN-shaanxi': '中文（方言-陕西）',
-            'zh-CN-shandong': '中文（方言-山东）',
-            'zh-CN-sichuan': '中文（方言-四川）'
-        }
+    //汉化 修改自: https://toolb.cn/textspeech
+    let cnLocal = {
+        'general': '普通',
+        'assistant': '助手',
+        'chat': '闲聊',
+        'customerservice': '服侍',
+        'newscast': '新闻播报',
+        'newscast-casual': '新闻播报(冷淡)',
+        'affectionate': '温暖亲切',
+        'angry': '生气',
+        'calm': '平静',
+        'cheerful': '欢快',
+        'excited': '激动',
+        'friendly': '温和',
+        'hopeful': '期待',
+        'shouting': '喊叫',
+        'terrified': '害怕',
+        'unfriendly': '冷漠',
+        'whispering': '耳语',
+        'empathetic': '同情',
+        'newscast-formal': '新闻播报(正式)',
+        'disgruntled': '不满',
+        'fearful': '担心',
+        'gentle': '温合文雅',
+        'lyrical': '热情奔放',
+        'embarrassed': '犹豫',
+        'sad': '悲伤',
+        'serious': '严肃',
+        'depressed': '忧伤',
+        'envious': '嫉妒',
+        'poetry-reading': '诗歌朗诵',
+        //角色(身份):
+        'narration-professional': '讲故事(专业)',
+        'narration-casual': '讲故事(冷淡)',
+        'narration-relaxed': '讲故事(轻松)',
+        'Narration-relaxed': '讲故事(轻松)',
+        'Sports_commentary_excited': '体育解说(激动)',
+        'Sports_commentary': '体育解说',
+        'Advertisement_upbeat': '广告推销(积极)',
+        'YoungAdultFemale': '女性青年',
+        'YoungAdultMale': '男性青年',
+        'OlderAdultFemale': '年长女性',
+        'OlderAdultMale': '年长男性',
+        'SeniorFemale': '高龄女性',
+        'SeniorMale': '高龄男性',
+        'Girl': '小女孩',
+        'Boy': '小男孩',
+        'Narrator': '旁白',
+        //语言:
+        'zh-CN': '*中文（简体)',
+        'zh-TW': '中文（台湾）',
+        'zh-HK': '中文（香港）',
+        'zh-CN-henan': '中文（方言-河南）',
+        'zh-CN-liaoning': '中文（方言-辽宁）',
+        'zh-CN-shaanxi': '中文（方言-陕西）',
+        'zh-CN-shandong': '中文（方言-山东）',
+        'zh-CN-sichuan': '中文（方言-四川）'
+    }
 
-        let voices = {};
-        fetch('/api/azure/voices')
-            .then(response => {
-                if (response.status == 200) {
-                    return response.json();
-                } else {
-                    console.log(response);
-                    throw '加载失败';
-                }
-            }).then(data => {
-                voices = data;
-                refreshVoice(data);
-            }).catch(reason => {
-                alert(reason);
-            });
-
-        function refreshVoice(data) {
-            let voiceElement = document.getElementsByName('voiceName')[0];
-            voiceElement.innerHTMl = '';
-            let langElement = document.getElementsByName('language')[0]
-            langElement.innerHTML = ''
-            let localeList = new Map()
-            data.forEach(item => {
-                voices[item['ShortName']] = item;
-                let locale = item['Locale']
-                if (!localeList.has(locale)) {
-                    localeList.set(locale, cnLocal[locale] || item['LocaleName'])
-                }
-            });
-            //排序
-            const sortMap = new Map([...localeList.entries()].sort((a, b) => a[1].localeCompare(b[1])));
-            sortMap.forEach((value, key) => {
-                let langOption = document.createElement('option');
-                langOption.value = key
-                langOption.innerText = value
-                langElement.appendChild(langOption)
-            })
-
-            updateLanguageConfig();
-        }
-
-        function getSelectedText(elementName) {
-            let obj = document.getElementsByName(elementName)[0]
-            let index = obj.selectedIndex; // 选中索引
-            let text = obj.options[index].text; // 选中文本
-            return text
-        }
-
-        function updateName() {
-            let voiceName = document.getElementsByName('voiceName')[0].value;
-            let styleName = getSelectedText("styleName")
-            let roleName = getSelectedText("roleName")
-            let voice = voices[voiceName];
-            document.getElementsByName('name')[0].value = '微软TTS（' + voice['LocalName'] + '-' + styleName + '-' + roleName + '）';
-        }
-
-        function updateLanguageConfig() {
-            let language = document.getElementsByName('language')[0].value;
-            let voiceElement = document.getElementsByName('voiceName')[0]
-            voiceElement.innerHTML = ''
-            voices.forEach(value => {
-                if (value['Locale'] === language) {
-                    let option = document.createElement('option');
-                    option.value = value['ShortName'];
-                    option.innerText = value['LocalName'] + ' (' + value['DisplayName'] + ')'
-                    voiceElement.append(option)
-                }
-            })
-            updateVoiceConfig()
-        }
-
-        function updateVoiceConfig() {
-            let voiceName = document.getElementsByName('voiceName')[0].value;
-            let voice = voices[voiceName];
-            let styleElement = document.getElementsByName('styleName')[0]
-            styleElement.innerHTML = '';
-            let option = document.createElement('option');
-            option.value = 'general';
-            option.innerText = '普通';
-            styleElement.appendChild(option);
-
-            let styleList = voice['StyleList']
-            if (styleList) {
-                styleList.forEach(style => {
-                    let option = document.createElement('option');
-                    option.value = style;
-                    option.innerText = cnLocal[style] || style;
-                    styleElement.appendChild(option);
-                });
-            }
-
-            let roleElement = document.getElementsByName("roleName")[0]
-            let roleList = voice['RolePlayList']
-            roleElement.innerHTML = "<option value=\"default\">默认</option>"
-            if (roleList) {
-                roleElement.disabled = false
-                roleList.forEach(role => {
-                    let option = document.createElement('option')
-                    option.value = role
-                    option.innerText = cnLocal[role] || role
-                    roleElement.appendChild(option)
-                })
+    let voices = {};
+    fetch('/api/azure/voices')
+        .then(response => {
+            if (response.status == 200) {
+                return response.json();
             } else {
-                roleElement.disabled = true
+                console.log(response);
+                throw '加载失败';
             }
-            updateName()
+        }).then(data => {
+        voices = data;
+        refreshVoice(data);
+    }).catch(reason => {
+        alert(reason);
+    });
+
+    function refreshVoice(data) {
+        let voiceElement = document.getElementsByName('voiceName')[0];
+        voiceElement.innerHTMl = '';
+        let langElement = document.getElementsByName('language')[0]
+        langElement.innerHTML = ''
+        let localeList = new Map()
+        data.forEach(item => {
+            voices[item['ShortName']] = item;
+            let locale = item['Locale']
+            if (!localeList.has(locale)) {
+                localeList.set(locale, cnLocal[locale] || item['LocaleName'])
+            }
+        });
+        //排序
+        const sortMap = new Map([...localeList.entries()].sort((a, b) => a[1].localeCompare(b[1])));
+        sortMap.forEach((value, key) => {
+            let langOption = document.createElement('option');
+            langOption.value = key
+            langOption.innerText = value
+            langElement.appendChild(langOption)
+        })
+
+        updateLanguageConfig();
+    }
+
+    function getSelectedText(elementName) {
+        let obj = document.getElementsByName(elementName)[0]
+        let index = obj.selectedIndex; // 选中索引
+        let text = obj.options[index].text; // 选中文本
+        return text
+    }
+
+    function updateName() {
+        let voiceName = document.getElementsByName('voiceName')[0].value;
+        let styleName = getSelectedText("styleName")
+        let roleName = getSelectedText("roleName")
+        let voice = voices[voiceName];
+        document.getElementsByName('name')[0].value = '微软TTS（' + voice['LocalName'] + '-' + styleName + '-' + roleName + '）';
+    }
+
+    function updateLanguageConfig() {
+        let language = document.getElementsByName('language')[0].value;
+        let voiceElement = document.getElementsByName('voiceName')[0]
+        voiceElement.innerHTML = ''
+        voices.forEach(value => {
+            if (value['Locale'] === language) {
+                let option = document.createElement('option');
+                option.value = value['ShortName'];
+                option.innerText = value['LocalName'] + ' (' + value['DisplayName'] + ')'
+                voiceElement.append(option)
+            }
+        })
+        updateVoiceConfig()
+    }
+
+    function updateVoiceConfig() {
+        let voiceName = document.getElementsByName('voiceName')[0].value;
+        let voice = voices[voiceName];
+        let styleElement = document.getElementsByName('styleName')[0]
+        styleElement.innerHTML = '';
+        let option = document.createElement('option');
+        option.value = 'general';
+        option.innerText = '普通';
+        styleElement.appendChild(option);
+
+        let styleList = voice['StyleList']
+        if (styleList) {
+            styleList.forEach(style => {
+                let option = document.createElement('option');
+                option.value = style;
+                option.innerText = cnLocal[style] || style;
+                styleElement.appendChild(option);
+            });
         }
 
-        function createSSML(text, voiceName, styleName, styleDegree, roleName) {
-            let ssml = `\
+        let roleElement = document.getElementsByName("roleName")[0]
+        let roleList = voice['RolePlayList']
+        roleElement.innerHTML = "<option value=\"default\">默认</option>"
+        if (roleList) {
+            roleElement.disabled = false
+            roleList.forEach(role => {
+                let option = document.createElement('option')
+                option.value = role
+                option.innerText = cnLocal[role] || role
+                roleElement.appendChild(option)
+            })
+        } else {
+            roleElement.disabled = true
+        }
+        updateName()
+    }
+
+    function createSSML(text, voiceName, styleName, styleDegree, roleName) {
+        let ssml = `\
         <speak xmlns="http://www.w3.org/2001/10/synthesis" xmlns:mstts="http://www.w3.org/2001/mstts" xmlns:emo="http://www.w3.org/2009/10/emotionml" version="1.0" xml:lang="en-US">\
           <voice name="${voiceName}">\
             <mstts:express-as style="${styleName}" styledegree="${styleDegree}" role="${roleName}">\
@@ -392,109 +395,115 @@
           </voice >\
         </speak > `
 
-            return ssml;
+        return ssml;
+    }
+
+    /* 单位转换 */
+    function unitConversion(limit) {
+        var size = "";
+        if (limit < 0.1 * 1024) {                            //小于0.1KB，则转化成B
+            size = limit.toFixed(2) + "B"
+        } else if (limit < 0.1 * 1024 * 1024) {            //小于0.1MB，则转化成KB
+            size = (limit / 1024).toFixed(2) + "KB"
+        } else if (limit < 0.1 * 1024 * 1024 * 1024) {        //小于0.1GB，则转化成MB
+            size = (limit / (1024 * 1024)).toFixed(2) + "MB"
+        } else {                                            //其他转化成GB
+            size = (limit / (1024 * 1024 * 1024)).toFixed(2) + "GB"
         }
 
-        /* 单位转换 */
-        function unitConversion(limit) {
-            var size = "";
-            if (limit < 0.1 * 1024) {                            //小于0.1KB，则转化成B
-                size = limit.toFixed(2) + "B"
-            } else if (limit < 0.1 * 1024 * 1024) {            //小于0.1MB，则转化成KB
-                size = (limit / 1024).toFixed(2) + "KB"
-            } else if (limit < 0.1 * 1024 * 1024 * 1024) {        //小于0.1GB，则转化成MB
-                size = (limit / (1024 * 1024)).toFixed(2) + "MB"
-            } else {                                            //其他转化成GB
-                size = (limit / (1024 * 1024 * 1024)).toFixed(2) + "GB"
+        var sizeStr = size + "";                        //转成字符串
+        var index = sizeStr.indexOf(".");                    //获取小数点处的索引
+        var dou = sizeStr.substr(index + 1, 2)            //获取小数点后两位的值
+        if (dou == "00") {                                //判断后两位是否为00，如果是则删除00
+            return sizeStr.substring(0, index) + sizeStr.substr(index + 3, 2)
+        }
+        return size;
+    }
+
+    function preview() {
+        let headers = {'Content-Type': 'text/plain'};
+
+        let voiceName = document.getElementsByName('voiceName')[0].value;
+        let voiceFormat = document.getElementsByName('voiceFormat')[0].value;
+        let styleName = document.getElementsByName('styleName')[0].value;
+        let styleDegree = document.getElementsByName('styleDegree')[0].value;
+        let roleName = document.getElementsByName('roleName')[0].value;
+        let token = document.getElementsByName('token')[0].value;
+        let previewText = document.getElementsByName('previewText')[0].value;
+
+        if (token) {
+            headers['Token'] = token;
+        }
+
+        let body = createSSML(previewText, voiceName, styleName, styleDegree, roleName)
+        headers['Format'] = voiceFormat
+
+        let button = document.getElementById('previewButton');
+        let textInfo = document.getElementById('audioInfoLabel')
+        button.disabled = true;
+        textInfo.innerText = "大小: 0kb | 耗时: 0ms"
+        let ctx = new AudioContext();
+        let startTime = Date.now()
+        fetch('/api/azure', {
+            method: 'post',
+            headers: headers,
+            body: body
+        }).then(response => {
+            if (response.status == 200) {
+                let audioSize = response.headers.get("Content-Length")
+                let elapsedTme = Date.now() - startTime
+                textInfo.innerText =
+                    `大小: ${unitConversion(audioSize)} | 耗时: ${elapsedTme}ms`
+                return response.arrayBuffer()
+            } else {
+                return response.text().then(text => Promise.reject(text));
             }
+        }).then(arrayBuffer => ctx.decodeAudioData(arrayBuffer))
+            .then(audio => {
+                let player = ctx.createBufferSource();
+                player.buffer = audio;
+                player.connect(ctx.destination);
+                player.start(ctx.currentTime);
+            })
+            .catch(reason => {
+                alert(reason);
+            })
+            .finally(() => {
+                button.disabled = false
+            });
+    }
 
-            var sizeStr = size + "";                        //转成字符串
-            var index = sizeStr.indexOf(".");                    //获取小数点处的索引
-            var dou = sizeStr.substr(index + 1, 2)            //获取小数点后两位的值
-            if (dou == "00") {                                //判断后两位是否为00，如果是则删除00
-                return sizeStr.substring(0, index) + sizeStr.substr(index + 3, 2)
-            }
-            return size;
-        }
+    function createLegadoUrl() {
+        let name = document.getElementsByName('name')[0].value;
+        let voiceName = document.getElementsByName('voiceName')[0].value;
+        let styleName = document.getElementsByName('styleName')[0].value;
+        let styleDegree = document.getElementsByName('styleDegree')[0].value;
+        let roleName = document.getElementsByName('roleName')[0].value;
+        let voiceFormat = document.getElementsByName('voiceFormat')[0].value;
+        let token = document.getElementsByName('token')[0].value;
+        let previewText = document.getElementsByName('previewText')[0].value;
+        let url = window.location.protocol + '//' + window.location.host + '/api/legado?api=' +
+            encodeURI(window.location.protocol + '//' + window.location.host + '/api/azure')
+            + '&name=' + encodeURI(name)
+            + '&voiceName=' + voiceName
+            + '&styleName=' + styleName
+            + '&styleDegree=' + styleDegree
+            + '&roleName=' + roleName
+            + '&voiceFormat=' + voiceFormat
+            + '&token=' + token
+        let svg = new QRCode(url).svg();
+        let modal = new bootstrap.Modal(document.getElementById('legadoUrlModal'))
+        modal.show();
+        document.getElementById('legadoUrlQRCode').innerHTML = svg;
+        document.getElementById('legadoUrl').value = url;
+    }
 
-        function preview() {
-            let headers = { 'Content-Type': 'text/plain' };
+    function openAppImport() {
+        let url = document.getElementById('legadoUrl').value
+        window.location.href = 'legado://import/httpTTS?src=' + url
+    }
 
-            let voiceName = document.getElementsByName('voiceName')[0].value;
-            let voiceFormat = document.getElementsByName('voiceFormat')[0].value;
-            let styleName = document.getElementsByName('styleName')[0].value;
-            let styleDegree = document.getElementsByName('styleDegree')[0].value;
-            let roleName = document.getElementsByName('roleName')[0].value;
-            let token = document.getElementsByName('token')[0].value;
-            let previewText = document.getElementsByName('previewText')[0].value;
-
-            if (token) {
-                headers['Token'] = token;
-            }
-
-            let body = createSSML(previewText, voiceName, styleName, styleDegree, roleName)
-            headers['Format'] = voiceFormat
-
-            let button = document.getElementById('previewButton');
-            let textInfo = document.getElementById('audioInfoLabel')
-            button.disabled = true;
-            textInfo.innerText = "大小: 0kb | 耗时: 0ms"
-            let ctx = new AudioContext();
-            let startTime = Date.now()
-            fetch('/api/azure', {
-                method: 'post',
-                headers: headers,
-                body: body
-            }).then(response => {
-                if (response.status == 200) {
-                    let audioSize = response.headers.get("Content-Length")
-                    let elapsedTme = Date.now() - startTime
-                    textInfo.innerText =
-                        `大小: ${unitConversion(audioSize)} | 耗时: ${elapsedTme}ms`
-                    return response.arrayBuffer()
-                } else {
-                    return response.text().then(text => Promise.reject(text));
-                }
-            }).then(arrayBuffer => ctx.decodeAudioData(arrayBuffer))
-                .then(audio => {
-                    let player = ctx.createBufferSource();
-                    player.buffer = audio;
-                    player.connect(ctx.destination);
-                    player.start(ctx.currentTime);
-                })
-                .catch(reason => {
-                    alert(reason);
-                })
-                .finally(() => {
-                    button.disabled = false
-                });
-        }
-
-        function createLegadoUrl() {
-            let name = document.getElementsByName('name')[0].value;
-            let voiceName = document.getElementsByName('voiceName')[0].value;
-            let styleName = document.getElementsByName('styleName')[0].value;
-            let styleDegree = document.getElementsByName('styleDegree')[0].value;
-            let roleName = document.getElementsByName('roleName')[0].value;
-            let voiceFormat = document.getElementsByName('voiceFormat')[0].value;
-            let token = document.getElementsByName('token')[0].value;
-            let previewText = document.getElementsByName('previewText')[0].value;
-            let url = window.location.protocol + '//' + window.location.host + '/api/legado?api=' +
-                encodeURI(window.location.protocol + '//' + window.location.host + '/api/azure')
-                + '&name=' + encodeURI(name)
-                + '&voiceName=' + voiceName
-                + '&styleName=' + styleName
-                + '&styleDegree=' + styleDegree
-                + '&roleName=' + roleName
-                + '&voiceFormat=' + voiceFormat
-                + '&token=' + token
-            let svg = new QRCode(url).svg();
-            let modal = new bootstrap.Modal(document.getElementById('legadoUrlModal'))
-            modal.show();
-            document.getElementById('legadoUrlQRCode').innerHTML = svg;
-            document.getElementById('legadoUrl').value = url;
-        }
-    </script>
+</script>
 </body>
 
 </html>
