@@ -279,7 +279,7 @@
             let voiceFormat = document.getElementsByName('voiceFormat')[0].value;
             let token = document.getElementsByName('token')[0].value;
             if (token) {
-                headers['Token'] = 'Bearer ' + token;
+                headers['Token'] = token;
             }
 
             headers['Format'] = voiceFormat;
