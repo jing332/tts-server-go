@@ -117,7 +117,7 @@ func (t *TTS) GetAudio(ssml, format string) (audioData []byte, err error) {
 
 func (t *TTS) sendConfigMessage(format string) error {
 	cfgMsg := "X-Timestamp:" + tts_server_go.GetISOTime() + "\r\nContent-Type:application/json; charset=utf-8\r\n" + "Path:speech.config\r\n\r\n" +
-		`{"context":{"synthesis":{"audio":{"metadataoptions":{"sentenceBoundaryEnabled":"false","wordBoundaryEnabled":"true"},"outputFormat":"` + format + `"}}}}`
+		`{"context":{"synthesis":{"audio":{"metadataoptions":{"sentenceBoundaryEnabled":"false","wordBoundaryEnabled":"false"},"outputFormat":"` + format + `"}}}}`
 	err := t.conn.WriteMessage(websocket.TextMessage, []byte(cfgMsg))
 	if err != nil {
 		return fmt.Errorf("发送Config失败: %s", err)
