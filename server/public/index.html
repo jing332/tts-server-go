@@ -333,7 +333,8 @@
             + '&name=' + encodeURI(name)
             + '&voiceName=' + voiceName
             + '&voiceFormat=' + voiceFormat
-            + '&token=' + token;
+            + '&token=' + token
+            + '&concurrentRate=1000'
         let svg = new QRCode(url).svg();
         let modal = new bootstrap.Modal(document.getElementById('legadoUrlModal'))
         modal.show();

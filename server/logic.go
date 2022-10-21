@@ -13,7 +13,7 @@ type LegadoJson struct {
 	LastUpdateTime int64  `json:"lastUpdateTime"`
 	Name           string `json:"name"`
 	URL            string `json:"url"`
-	//ConcurrentRate   string `json:"concurrentRate"`
+	ConcurrentRate string `json:"concurrentRate"`
 	//EnabledCookieJar bool   `json:"enabledCookieJar"`
 	//LoginCheckJs   string `json:"loginCheckJs"`
 	//LoginUI        string `json:"loginUi"`
@@ -33,7 +33,7 @@ type CreationJson struct {
 }
 
 /* 生成阅读APP朗读朗读引擎Json (Edge, Azure) */
-func genLegodoJson(api, name, voiceName, styleName, styleDegree, roleName, voiceFormat, token string) ([]byte, error) {
+func genLegodoJson(api, name, voiceName, styleName, styleDegree, roleName, voiceFormat, token, concurrentRate string) ([]byte, error) {
 	t := time.Now().UnixNano() / 1e6 //毫秒时间戳
 	var url string
 	if styleName == "" { /* Edge大声朗读 */
@@ -45,7 +45,8 @@ func genLegodoJson(api, name, voiceName, styleName, styleDegree, roleName, voice
 	}
 
 	head := `{"Content-Type":"text/plain","Format":"` + voiceFormat + `", "Token":"` + token + `"}`
-	legadoJson := &LegadoJson{Name: name, URL: url, ID: t, LastUpdateTime: t, ContentType: formatContentType(voiceFormat), Header: head}
+	legadoJson := &LegadoJson{Name: name, URL: url, ID: t, LastUpdateTime: t, ContentType: formatContentType(voiceFormat),
+		Header: head, ConcurrentRate: concurrentRate}
 
 	body, err := json.Marshal(legadoJson)
 	if err != nil {
@@ -56,7 +57,7 @@ func genLegodoJson(api, name, voiceName, styleName, styleDegree, roleName, voice
 }
 
 /* 生成阅读APP朗读引擎Json (Creation) */
-func genLegadoCreationJson(api, name, voiceName, voiceId, styleName, styleDegree, roleName, voiceFormat, token string) ([]byte, error) {
+func genLegadoCreationJson(api, name, voiceName, voiceId, styleName, styleDegree, roleName, voiceFormat, token, concurrentRate string) ([]byte, error) {
 	t := time.Now().UnixNano() / 1e6 //毫秒时间戳
 	urlJsonStr := `{"text":"{{String(speakText).replace(/&/g, '&amp;').replace(/\"/g, '&quot;').replace(/'/g, '&apos;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/\\/g, '')}}","voiceName":"` +
 		voiceName + `","voiceId":"` + voiceId + `","rate":"{{(speakSpeed -10) * 2}}%","style":"` + styleName + `","styleDegree":"` + styleDegree +
@@ -64,7 +65,8 @@ func genLegadoCreationJson(api, name, voiceName, voiceId, styleName, styleDegree
 	url := api + `,{"method":"POST","body":` + urlJsonStr + `}`
 	head := `{"Content-Type":"application/json", "Token":"` + token + `"}`
 
-	legadoJson := &LegadoJson{Name: name, URL: url, ID: t, LastUpdateTime: t, ContentType: formatContentType(voiceFormat), Header: head}
+	legadoJson := &LegadoJson{Name: name, URL: url, ID: t, LastUpdateTime: t, ContentType: formatContentType(voiceFormat),
+		Header: head, ConcurrentRate: concurrentRate}
 	body, err := json.Marshal(legadoJson)
 	return body, err
 }

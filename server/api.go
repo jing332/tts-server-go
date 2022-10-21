@@ -368,18 +368,24 @@ func (s *GracefulServer) legadoAPIHandler(w http.ResponseWriter, r *http.Request
 	roleName := params.Get("roleName")       /* 角色(身份) */
 	voiceFormat := params.Get("voiceFormat") /* 音频格式 */
 	token := params.Get("token")
+	concurrentRate := params.Get("concurrentRate") /* 并发率(请求间隔) 毫秒为单位 */
 
 	var jsonStr []byte
 	var err error
 	if isCreation == "1" {
-		jsonStr, err = genLegadoCreationJson(apiUrl, name, voiceName, voiceId, styleName, styleDegree, roleName, voiceFormat, token)
+		jsonStr, err = genLegadoCreationJson(apiUrl, name, voiceName, voiceId, styleName, styleDegree, roleName,
+			voiceFormat, token, concurrentRate)
 	} else {
-		jsonStr, err = genLegodoJson(apiUrl, name, voiceName, styleName, styleDegree, roleName, voiceFormat, token)
+		jsonStr, err = genLegodoJson(apiUrl, name, voiceName, styleName, styleDegree, roleName, voiceFormat, token,
+			concurrentRate)
 	}
 	if err != nil {
 		writeErrorData(w, http.StatusBadRequest, err.Error())
 	} else {
-		w.Write(jsonStr)
+		_, err := w.Write(jsonStr)
+		if err != nil {
+			log.Error("网络导入时写入失败：", err)
+		}
 	}
 }
 
