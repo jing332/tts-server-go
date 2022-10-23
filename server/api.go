@@ -167,7 +167,7 @@ func (s *GracefulServer) edgeAPIHandler(w http.ResponseWriter, r *http.Request) 
 
 	select { /* 阻塞 等待结果 */
 	case data := <-succeed: /* 成功接收到音频 */
-		log.Infoln("音频下载完成")
+		log.Infof("音频下载完成, 大小：%dKB", len(data)/1024)
 		err := writeAudioData(w, data, format)
 		if err != nil {
 			log.Warnln(err)
@@ -186,7 +186,7 @@ func (s *GracefulServer) edgeAPIHandler(w http.ResponseWriter, r *http.Request) 
 			ttsEdge = nil
 		}
 	}
-	log.Infof("耗时: %dms\n", time.Since(startTime).Milliseconds())
+	log.Infof("耗时：%dms\n", time.Since(startTime).Milliseconds())
 }
 
 type LastAudioCache struct {
@@ -254,7 +254,7 @@ func (s *GracefulServer) azureAPIHandler(w http.ResponseWriter, r *http.Request)
 
 	select { /* 阻塞 等待结果 */
 	case data := <-succeed: /* 成功接收到音频 */
-		log.Infoln("音频下载完成")
+		log.Infof("音频下载完成, 大小：%dKB", len(data)/1024)
 		err := writeAudioData(w, data, format)
 		if err != nil {
 			log.Warnln(err)
@@ -281,7 +281,6 @@ func (s *GracefulServer) azureAPIHandler(w http.ResponseWriter, r *http.Request)
 }
 
 var ttsCreation *creation.TTS
-var creationLastRequestTime time.Time
 
 func (s *GracefulServer) creationAPIHandler(w http.ResponseWriter, r *http.Request) {
 	s.creationLock.Lock()
@@ -292,14 +291,7 @@ func (s *GracefulServer) creationAPIHandler(w http.ResponseWriter, r *http.Reque
 		return
 	}
 
-	/* 限制两次请求间隔时间 */
-	interval := time.Now().Unix() - creationLastRequestTime.Unix()
-	if interval <= 2 { /* 两次请求间隔小于等于2s */
-		time.Sleep(time.Duration(interval) * time.Second)
-	}
-	creationLastRequestTime = time.Now()
-
-	startTime := creationLastRequestTime
+	startTime := time.Now()
 	body, _ := io.ReadAll(r.Body)
 	text := string(body)
 	log.Infoln("接收到Json(Creation): ", text)
@@ -321,7 +313,7 @@ func (s *GracefulServer) creationAPIHandler(w http.ResponseWriter, r *http.Reque
 	} else {
 		data, err = ttsCreation.GetAudio(&arg)
 	}
-
+	log.Infof("音频下载完成, 大小：%dKB", len(data)/1024)
 	if err != nil {
 		writeErrorData(w, http.StatusInternalServerError, "获取音频失败(Creation): "+err.Error())
 		ttsCreation = nil
