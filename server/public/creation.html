@@ -189,6 +189,7 @@
         integrity="sha384-ka7Sk0Gln4gmtz2MlQnikT1wXgYsOg+OMhuP+IlRH9sENBO0LRn5q+8nbTov4+1p"
         crossorigin="anonymous"></script>
 <script src="https://cdn.jsdelivr.net/npm/qrcode-svg@1.1.0/lib/qrcode.min.js"></script>
+<script src="static.js"></script>
 <script>
     function copy() {
         setTimeout(function () {
@@ -206,66 +207,6 @@
         } catch (e) {
             document.getElementById("copyButton").innerText = "复制失败 请手动复制"
         }
-    }
-
-    //汉化 来自: https://toolb.cn/textspeech
-    let cnLocal = {
-        'general': '普通',
-        'assistant': '助手',
-        'chat': '闲聊',
-        'customerservice': '服侍',
-        'newscast': '新闻播报',
-        'newscast-casual': '新闻播报(冷淡)',
-        'affectionate': '温暖亲切',
-        'angry': '生气',
-        'calm': '平静',
-        'cheerful': '欢快',
-        'excited': '激动',
-        'friendly': '温和',
-        'hopeful': '期待',
-        'shouting': '喊叫',
-        'terrified': '害怕',
-        'unfriendly': '冷漠',
-        'whispering': '耳语',
-        'empathetic': '同情',
-        'newscast-formal': '新闻播报(正式)',
-        'disgruntled': '不满',
-        'fearful': '担心',
-        'gentle': '温合文雅',
-        'lyrical': '热情奔放',
-        'embarrassed': '犹豫',
-        'sad': '悲伤',
-        'serious': '严肃',
-        'depressed': '忧伤',
-        'envious': '嫉妒',
-        'poetry-reading': '诗歌朗诵',
-        'Default': '默认',
-        //角色(身份):
-        'narration-professional': '讲故事(专业)',
-        'narration-casual': '讲故事(冷淡)',
-        'narration-relaxed': '讲故事(轻松)',
-        'Narration-relaxed': '讲故事(轻松)',
-        'Sports_commentary_excited': '体育解说(激动)',
-        'Sports_commentary': '体育解说',
-        'Advertisement_upbeat': '广告推销(积极)',
-        'YoungAdultFemale': '女性青年',
-        'YoungAdultMale': '男性青年',
-        'OlderAdultFemale': '年长女性',
-        'OlderAdultMale': '年长男性',
-        'SeniorFemale': '高龄女性',
-        'SeniorMale': '高龄男性',
-        'Girl': '小女孩',
-        'Boy': '小男孩',
-        'Narrator': '旁白',
-        //语言:
-        'zh-CN': '*中文（简体)',
-        'zh-TW': '中文（台湾）',
-        'zh-HK': '中文（香港）',
-        'zh-CN-henan': '中文（方言-河南）',
-        'zh-CN-liaoning': '中文（方言-辽宁）',
-        'zh-CN-shaanxi': '中文（方言-陕西）',
-        'zh-CN-shandong': '中文（方言-山东）',
-        'zh-CN-sichuan': '中文（方言-四川）'
     }
 
     let voices = {};
@@ -295,17 +236,19 @@
             let pro = item['properties']
             voices[pro['ShortName']] = item;
             if (!localeList.has(locale)) {
-                localeList.set(locale, cnLocal[locale] || pro['LocaleDescription'])
+                localeList.set(locale, cnLocalLanguage[locale] || pro['LocaleDescription'])
             }
         });
 
         //对语言列表进行排序
         const sortMap = new Map([...localeList.entries()].sort((a, b) => a[1].localeCompare(b[1])));
         sortMap.forEach((value, key) => {
-            let langOption = document.createElement('option');
-            langOption.value = key
-            langOption.innerText = value
-            langElement.appendChild(langOption)
+            let option = document.createElement('option');
+            option.value = key
+            option.innerText = value
+            if (key === "zh-CN")
+                option.selected = true
+            langElement.appendChild(option)
         })
 
         updateLanguageConfig()
@@ -335,11 +278,11 @@
         voices.forEach(function (value, key) {
             if (value['locale'] === language) {
                 let pro = value['properties']
-                voiceMap.set(value['shortName'], (pro['LocalName'] ?? pro['ShortName']) + ' (' + pro['DisplayName'] + ')')
+                voiceMap.set(value['shortName'], pro['LocalName'] + ' (' + pro['ShortName'] + ')')
             }
         })
 
-        //对发音人列表进行排序
+        //对发音人列表进行排序(因为这个接口数据比较乱)
         const sortMap = new Map([...voiceMap.entries()].sort((a, b) => a[1].localeCompare(b[1])));
         sortMap.forEach((value, key) => {
             let option = document.createElement('option');
@@ -370,7 +313,7 @@
                     let style = styleList[i]
                     let option = document.createElement('option');
                     option.value = style;
-                    option.innerText = cnLocal[style] || style;
+                    option.innerText = cnLocalStyleAndRole[style] || style;
                     styleElement.appendChild(option);
                 }
             }
@@ -385,7 +328,7 @@
                     if (role.length > 0 && role !== 'Default') {
                         let option = document.createElement('option')
                         option.value = role
-                        option.innerText = cnLocal[role] || role
+                        option.innerText = cnLocalStyleAndRole[role] || role
                         roleElement.appendChild(option)
                     }
                 }
@@ -409,28 +352,6 @@
         return json
     }
 
-    /* 单位转换 */
-    function unitConversion(limit) {
-        var size = "";
-        if (limit < 0.1 * 1024) {                            //小于0.1KB，则转化成B
-            size = limit.toFixed(2) + "B"
-        } else if (limit < 0.1 * 1024 * 1024) {            //小于0.1MB，则转化成KB
-            size = (limit / 1024).toFixed(2) + "KB"
-        } else if (limit < 0.1 * 1024 * 1024 * 1024) {        //小于0.1GB，则转化成MB
-            size = (limit / (1024 * 1024)).toFixed(2) + "MB"
-        } else {                                            //其他转化成GB
-            size = (limit / (1024 * 1024 * 1024)).toFixed(2) + "GB"
-        }
-
-        var sizeStr = size + "";                        //转成字符串
-        var index = sizeStr.indexOf(".");                    //获取小数点处的索引
-        var dou = sizeStr.substr(index + 1, 2)            //获取小数点后两位的值
-        if (dou == "00") {                                //判断后两位是否为00，如果是则删除00
-            return sizeStr.substring(0, index) + sizeStr.substr(index + 3, 2)
-        }
-        return size;
-    }
-
     function preview() {
         let headers = {'Content-Type': 'text/plain'};
 
@@ -442,9 +363,7 @@
         let token = document.getElementsByName('token')[0].value;
         let previewText = document.getElementsByName('previewText')[0].value;
 
-        if (token) {
-            headers['Token'] = token;
-        }
+        if (token) headers['Token'] = token
         let voiceId = voices[voiceName]['id']
         let body = createCreationJson(previewText, voiceName, voiceId, styleName, styleDegree, roleName, voiceFormat)
         let button = document.getElementById('previewButton');

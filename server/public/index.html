@@ -141,6 +141,7 @@
         integrity="sha384-ka7Sk0Gln4gmtz2MlQnikT1wXgYsOg+OMhuP+IlRH9sENBO0LRn5q+8nbTov4+1p"
         crossorigin="anonymous"></script>
 <script src="https://cdn.jsdelivr.net/npm/qrcode-svg@1.1.0/lib/qrcode.min.js"></script>
+<script src="static.js"></script>
 <script>
     function copy() {
         setTimeout(function () {
@@ -149,7 +150,7 @@
 
         try {
             document.getElementById("legadoUrl").select()
-            var sussced = document.execCommand("copy")
+            let sussced = document.execCommand("copy");
             if (sussced) {
                 document.getElementById("copyButton").innerText = "已复制到剪贴板"
             } else {
@@ -160,17 +161,10 @@
         }
     }
 
-    let cnLocal = {
-        //语言:
-        'zh-CN': '*中文（简体)',
-        'zh-TW': '中文（台湾）',
-        'zh-HK': '中文（香港）',
-    }
-
     let voices = [];
     fetch('https://speech.platform.bing.com/consumer/speech/synthesize/readaloud/voices/list?trustedclienttoken=6A5AA1D4EAFF4E9FB37E23D68491D6F4')
         .then(response => {
-            if (response.status == 200) {
+            if (response.status === 200) {
                 return response.json();
             } else {
                 console.log(response);
@@ -191,16 +185,17 @@
             let friendlyName = item['FriendlyName']
             let locale = item['Locale']
             if (!localeList.has(locale)) {
-                localeList.set(locale, cnLocal[locale] || friendlyName.split('- ')[1])
+                localeList.set(locale, cnLocalLanguage[locale] || friendlyName.split('- ')[1])
             }
         });
-        //排序
+        //排序语言列表
         const sortMap = new Map([...localeList.entries()].sort((a, b) => a[1].localeCompare(b[1])));
         sortMap.forEach((value, key) => {
-            let langOption = document.createElement('option');
-            langOption.value = key
-            langOption.innerText = value
-            langElement.appendChild(langOption)
+            let option = document.createElement('option');
+            option.value = key
+            option.innerText = value
+            if (key === "zh-CN") option.selected = true
+            langElement.appendChild(option)
         })
 
         updateLanguageConfig()
@@ -228,8 +223,9 @@
         voices.forEach(value => {
             if (value['Locale'] === language) {
                 let option = document.createElement('option');
-                option.value = value['ShortName'];
-                option.innerText = value['FriendlyName'];
+                let shortName = value['ShortName']
+                option.value = shortName
+                option.innerText = cnLocalVoice[shortName] + "（" + shortName + "）" || shortName;
                 voiceElement.append(option)
             }
         })
@@ -252,28 +248,6 @@
         </speak > '
 
         return ssml;
-    }
-
-    /* 单位转换 */
-    function unitConversion(limit) {
-        var size = "";
-        if (limit < 0.1 * 1024) {                            //小于0.1KB，则转化成B
-            size = limit.toFixed(2) + "B"
-        } else if (limit < 0.1 * 1024 * 1024) {            //小于0.1MB，则转化成KB
-            size = (limit / 1024).toFixed(2) + "KB"
-        } else if (limit < 0.1 * 1024 * 1024 * 1024) {        //小于0.1GB，则转化成MB
-            size = (limit / (1024 * 1024)).toFixed(2) + "MB"
-        } else {                                            //其他转化成GB
-            size = (limit / (1024 * 1024 * 1024)).toFixed(2) + "GB"
-        }
-
-        var sizeStr = size + "";                        //转成字符串
-        var index = sizeStr.indexOf(".");                    //获取小数点处的索引
-        var dou = sizeStr.substr(index + 1, 2)            //获取小数点后两位的值
-        if (dou == "00") {                                //判断后两位是否为00，如果是则删除00
-            return sizeStr.substring(0, index) + sizeStr.substr(index + 3, 2)
-        }
-        return size;
     }
 
     function preview() {
