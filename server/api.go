@@ -80,6 +80,12 @@ func (s *GracefulServer) ListenAndServe(port int64) error {
 	return nil
 }
 
+// Close 强制关闭，会终止连接
+func (s *GracefulServer) Close() {
+	_ = s.Server.Close()
+	_ = s.Shutdown(10)
+}
+
 // Shutdown 关闭监听服务，需等待响应
 func (s *GracefulServer) Shutdown(timeout time.Duration) error {
 	ctx, cancel := context.WithTimeout(context.Background(), timeout)
