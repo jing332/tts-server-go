@@ -19,11 +19,10 @@ func main() {
 		log.Info("使用Token: ", *token)
 	}
 
-	server := &server.GracefulServer{Token: *token}
-	server.HandleFunc()
-	err := server.ListenAndServe(*port)
+	srv := &server.GracefulServer{Token: *token}
+	srv.HandleFunc()
+	err := srv.ListenAndServe(*port)
 	if err != nil {
 		log.Fatal(err)
 	}
-
 }

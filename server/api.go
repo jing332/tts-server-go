@@ -5,6 +5,7 @@ import (
 	"embed"
 	_ "embed"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"io/fs"
@@ -99,6 +100,7 @@ func (s *GracefulServer) verifyToken(w http.ResponseWriter, r *http.Request) boo
 	if s.Token != "" {
 		token := r.Header.Get("Token")
 		if s.Token != token {
+			log.Warnf("无效的Token: %s, 远程地址: %s", token, r.RemoteAddr)
 			w.WriteHeader(http.StatusUnauthorized)
 			w.Write([]byte("无效的Token"))
 			return false
@@ -279,6 +281,7 @@ func (s *GracefulServer) creationAPIHandler(w http.ResponseWriter, r *http.Reque
 	body, _ := io.ReadAll(r.Body)
 	text := string(body)
 	log.Infoln("接收到Json(Creation): ", text)
+
 	var reqData CreationJson
 	err := json.Unmarshal(body, &reqData)
 	if err != nil {
@@ -287,25 +290,45 @@ func (s *GracefulServer) creationAPIHandler(w http.ResponseWriter, r *http.Reque
 	}
 
 	if ttsCreation == nil {
-		ttsCreation = &creation.TTS{}
+		ttsCreation = creation.New()
 	}
 
 	arg := creation.SpeakArg(reqData)
-	var data []byte
-	if reqData.VoiceId == "" { /* 无VoiceId，向下兼容*/
-		data, err = ttsCreation.GetAudioNoVoiceId(&arg)
-	} else {
-		data, err = ttsCreation.GetAudio(&arg)
-	}
-	log.Infof("音频下载完成, 大小：%dKB", len(data)/1024)
-	if err != nil {
-		writeErrorData(w, http.StatusInternalServerError, "获取音频失败(Creation): "+err.Error())
-		ttsCreation = nil
-	} else {
-		err = writeAudioData(w, data, reqData.Format)
+	var succeed = make(chan []byte)
+	var failed = make(chan error)
+	go func() {
+		for i := 0; i < 3; i++ { /* 循环3次, 成功则return */
+			data, err := ttsCreation.GetAudioUseContext(r.Context(), &arg)
+			if err != nil {
+				if errors.Is(err, context.Canceled) {
+					return
+				}
+				if i == 2 { //三次请求都失败
+					failed <- err
+					return
+				}
+				log.Warnln(err)
+				log.Warnf("开始第%d次重试...", i+1)
+				time.Sleep(time.Second * 2)
+			} else { /* 成功 */
+				succeed <- data
+				return
+			}
+		}
+	}()
+
+	select { /* 阻塞 等待结果 */
+	case data := <-succeed: /* 成功接收到音频 */
+		log.Infof("音频下载完成, 大小：%dKB", len(data)/1024)
+		err := writeAudioData(w, data, reqData.Format)
 		if err != nil {
 			log.Warnln(err)
 		}
+	case reason := <-failed: /* 失败 */
+		writeErrorData(w, http.StatusInternalServerError, "获取音频失败(Creation): "+reason.Error())
+		ttsCreation = nil
+	case <-r.Context().Done(): /* 与阅读APP断开连接  超时15s */
+		log.Warnln("客户端(阅读APP)连接 超时关闭/意外断开")
 	}
 
 	log.Infof("耗时: %dms\n", time.Since(startTime).Milliseconds())
