@@ -2,10 +2,12 @@ package server
 
 import (
 	"context"
+	"embed"
 	_ "embed"
 	"encoding/json"
 	"fmt"
 	"io"
+	"io/fs"
 	"net/http"
 	"strconv"
 	"sync"
@@ -29,13 +31,17 @@ type GracefulServer struct {
 	creationLock sync.Mutex
 }
 
+//go:embed public/*
+var webFiles embed.FS
+
 // HandleFunc 注册
 func (s *GracefulServer) HandleFunc() {
 	if s.serveMux == nil {
 		s.serveMux = &http.ServeMux{}
 	}
 
-	s.serveMux.HandleFunc("/", s.webAPIHandler)
+	webFilesFs, _ := fs.Sub(webFiles, "public")
+	s.serveMux.Handle("/", http.FileServer(http.FS(webFilesFs)))
 	s.serveMux.Handle("/api/legado", http.TimeoutHandler(http.HandlerFunc(s.legadoAPIHandler), 15*time.Second, "timeout"))
 
 	s.serveMux.Handle("/api/azure", http.TimeoutHandler(http.HandlerFunc(s.azureAPIHandler), 30*time.Second, "timeout"))
@@ -86,28 +92,6 @@ func (s *GracefulServer) Shutdown(timeout time.Duration) error {
 	s.shutdownLoad = nil
 
 	return nil
-}
-
-//go:embed public/index.html
-var indexHtml []byte
-
-//go:embed public/azure.html
-var azureHtml []byte
-
-//go:embed public/creation.html
-var creationHtml []byte
-
-func (s *GracefulServer) webAPIHandler(w http.ResponseWriter, r *http.Request) {
-	switch r.URL.Path {
-	case "/":
-		w.Write(indexHtml)
-	case "/azure.html":
-		w.Write(azureHtml)
-	case "/creation.html":
-		w.Write(creationHtml)
-	default:
-		w.WriteHeader(http.StatusNotFound)
-	}
 }
 
 // 验证Token true表示成功或未设置Token
