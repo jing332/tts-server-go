@@ -63,7 +63,6 @@ func (t *TTS) NewConn() error {
 			messageType, p, err := t.conn.ReadMessage()
 			closed := t.onReadMessage(messageType, p, err)
 			if closed {
-				log.Warnln("close")
 				t.conn = nil
 				return
 			}

@@ -84,6 +84,13 @@ func (s *GracefulServer) ListenAndServe(port int64) error {
 
 // Close 强制关闭，会终止连接
 func (s *GracefulServer) Close() {
+	if ttsEdge != nil {
+		ttsEdge.CloseConn()
+	}
+	if ttsAzure != nil {
+		ttsAzure.CloseConn()
+	}
+
 	_ = s.Server.Close()
 	_ = s.Shutdown(10)
 }
