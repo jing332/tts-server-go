@@ -12,6 +12,7 @@ import (
 
 var port = flag.Int64("port", 1233, "自定义监听端口")
 var token = flag.String("token", "", "使用token验证")
+var useDnsEdge = flag.Bool("use-dns-edge", false, "使用DNS解析Edge接口，而不是内置的北京微软云节点。")
 
 func main() {
 	log.SetFormatter(&logformat.Formatter{HideKeys: true,
@@ -19,10 +20,13 @@ func main() {
 	})
 	flag.Parse()
 	if *token != "" {
-		log.Info("使用Token: ", *token)
+		log.Info("使用Token: ", token)
+	}
+	if *useDnsEdge == true {
+		log.Infof("使用DNS解析Edge接口")
 	}
 
-	srv := &server.GracefulServer{Token: *token}
+	srv := &server.GracefulServer{Token: *token, UseDnsEdge: *useDnsEdge}
 	srv.HandleFunc()
 
 	go func() {

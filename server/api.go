@@ -22,7 +22,9 @@ import (
 )
 
 type GracefulServer struct {
-	Token        string
+	Token      string
+	UseDnsEdge bool
+
 	Server       *http.Server
 	serveMux     *http.ServeMux
 	shutdownLoad chan struct{}
@@ -134,7 +136,7 @@ func (s *GracefulServer) edgeAPIHandler(w http.ResponseWriter, r *http.Request) 
 
 	log.Infoln("接收到SSML(Edge):", ssml)
 	if ttsEdge == nil {
-		ttsEdge = &edge.TTS{}
+		ttsEdge = &edge.TTS{UseDnsLookup: s.UseDnsEdge}
 	}
 
 	var succeed = make(chan []byte)

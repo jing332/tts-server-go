@@ -6,6 +6,8 @@ import (
 	"github.com/gorilla/websocket"
 	"github.com/jing332/tts-server-go"
 	log "github.com/sirupsen/logrus"
+	"math/rand"
+	"net"
 	"strings"
 	"time"
 )
@@ -13,7 +15,8 @@ import (
 var wssUrl = `wss://speech.platform.bing.com/consumer/speech/synthesize/readaloud/edge/v1?TrustedClientToken=6A5AA1D4EAFF4E9FB37E23D68491D6F4&ConnectionId=`
 
 type TTS struct {
-	wssUrl        string
+	UseDnsLookup bool // 使用DNS解析，而不是北京微软云节点。
+
 	uuid          string
 	conn          *websocket.Conn
 	onReadMessage TReadMessage
@@ -26,6 +29,19 @@ func (t *TTS) NewConn() error {
 	dl := websocket.Dialer{
 		EnableCompression: true,
 		HandshakeTimeout:  time.Second * 15,
+	}
+
+	if !t.UseDnsLookup {
+		dialer := &net.Dialer{}
+		dl.NetDial = func(network, addr string) (net.Conn, error) {
+			if addr == "speech.platform.bing.com:443" {
+				rand.Seed(time.Now().Unix())
+				i := rand.Intn(len(ChinaIpList))
+				addr = fmt.Sprintf("%s:443", ChinaIpList[i])
+			}
+			log.Infoln("连接到IP地址: " + addr)
+			return dialer.Dial(network, addr)
+		}
 	}
 
 	head := tools.GetHeader(
@@ -47,6 +63,7 @@ func (t *TTS) NewConn() error {
 			messageType, p, err := t.conn.ReadMessage()
 			closed := t.onReadMessage(messageType, p, err)
 			if closed {
+				log.Warnln("close")
 				t.conn = nil
 				return
 			}
