@@ -92,7 +92,7 @@ func (s *GracefulServer) Close() {
 	}
 
 	_ = s.Server.Close()
-	_ = s.Shutdown(10)
+	_ = s.Shutdown(time.Second * 5)
 }
 
 // Shutdown 关闭监听服务，需等待响应

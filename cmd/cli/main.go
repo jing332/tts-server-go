@@ -34,10 +34,10 @@ func main() {
 		signal.Notify(sigint, os.Interrupt)
 		<-sigint
 		srv.Close()
-		log.Infoln("服务已关闭")
 	}()
 
 	if err := srv.ListenAndServe(*port); err != nil && err != http.ErrServerClosed {
 		log.Fatalf("HTTP server ListenAndServe: %v", err)
 	}
+	log.Infoln("服务已关闭")
 }
