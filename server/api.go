@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	tts_server_go "github.com/jing332/tts-server-go"
 	"io"
 	"io/fs"
 	"net/http"
@@ -69,7 +70,8 @@ func (s *GracefulServer) ListenAndServe(port int64) error {
 		MaxHeaderBytes: 1 << 20,
 		Handler:        s.serveMux,
 	}
-	log.Infoln("服务已启动, 监听端口为", s.Server.Addr)
+
+	log.Infof("服务已启动, 监听地址为: %s:%d", tts_server_go.GetOutboundIPString(), port)
 	err := s.Server.ListenAndServe()
 	if err == http.ErrServerClosed { /*说明调用Shutdown关闭*/
 		err = nil

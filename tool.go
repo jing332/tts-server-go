@@ -1,6 +1,7 @@
 package tts_server_go
 
 import (
+	"net"
 	"time"
 )
 
@@ -30,4 +31,25 @@ func ChunkString(s string, chunkSize int) []string {
 	}
 	chunks = append(chunks, s[currentStart:])
 	return chunks
+}
+
+// GetOutboundIP 获取本机首选出站IP
+func GetOutboundIP() (net.IP, error) {
+	conn, err := net.Dial("udp", "8.8.8.8:80")
+	if err != nil {
+		return nil, err
+	}
+	defer conn.Close()
+
+	localAddr := conn.LocalAddr().(*net.UDPAddr)
+	return localAddr.IP, nil
+}
+
+// GetOutboundIPString 获取本机首选出站IP，如错误则返回 'localhost'
+func GetOutboundIPString() string {
+	netIp, err := GetOutboundIP()
+	if err != nil {
+		return "localhost"
+	}
+	return netIp.String()
 }
