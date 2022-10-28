@@ -166,7 +166,7 @@
                 <div style="height:10px"></div>
                 <div class="row">
                     <div class="col" style="text-align: center">
-                        <button id="copyButton" class="btn btn-primary" onclick="copy()">一键复制</button>
+                        <button id="copyButton" class="btn btn-primary" onclick="copyLegadoUrl()">一键复制</button>
                         <button id="importButton" class="btn btn-primary" onclick="openAppImport()">一键导入</button>
                     </div>
                 </div>
@@ -191,23 +191,8 @@
 <script src="https://cdn.jsdelivr.net/npm/qrcode-svg@1.1.0/lib/qrcode.min.js"></script>
 <script src="static.js"></script>
 <script>
-    function copy() {
-        setTimeout(function () {
-            document.getElementById("copyButton").innerText = "一键复制"
-        }, 3000)
-
-        try {
-            document.getElementById("legadoUrl").select()
-            var sussced = document.execCommand("copy")
-            if (sussced) {
-                document.getElementById("copyButton").innerText = "已复制到剪贴板"
-            } else {
-                document.getElementById("copyButton").innerText = "复制失败 请手动复制"
-            }
-        } catch (e) {
-            document.getElementById("copyButton").innerText = "复制失败 请手动复制"
-        }
-    }
+    let token = localStorage.getItem("token")
+    document.getElementsByName('token')[0].value = token
 
     let voices = {};
     fetch('/api/creation/voices')
@@ -364,6 +349,8 @@
         let previewText = document.getElementsByName('previewText')[0].value;
 
         if (token) headers['Token'] = token
+        localStorage.setItem("token", token)
+
         let voiceId = voices[voiceName]['id']
         let body = createCreationJson(previewText, voiceName, voiceId, styleName, styleDegree, roleName, voiceFormat)
         let button = document.getElementById('previewButton');
@@ -427,11 +414,7 @@
         modal.show();
         document.getElementById('legadoUrlQRCode').innerHTML = svg;
         document.getElementById('legadoUrl').value = url;
-    }
-
-    function openAppImport() {
-        let url = document.getElementById('legadoUrl').value
-        window.location.href = 'legado://import/httpTTS?src=' + url
+        localStorage.setItem("token", token)
     }
 
 </script>

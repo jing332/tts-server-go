@@ -1,3 +1,26 @@
+function openAppImport() {
+    let url = document.getElementById('legadoUrl').value
+    window.location.href = 'legado://import/httpTTS?src=' + url
+}
+
+function copyLegadoUrl() {
+    setTimeout(function () {
+        document.getElementById("copyButton").innerText = "一键复制"
+    }, 3000)
+
+    try {
+        document.getElementById("legadoUrl").select()
+        let ok = document.execCommand("copy");
+        if (ok) {
+            document.getElementById("copyButton").innerText = "已复制到剪贴板"
+        } else {
+            document.getElementById("copyButton").innerText = "复制失败 请手动复制"
+        }
+    } catch (e) {
+        document.getElementById("copyButton").innerText = "复制失败 请手动复制"
+    }
+}
+
 /* 单位转换 */
 function unitConversion(limit) {
     let size = "";
