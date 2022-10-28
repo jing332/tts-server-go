@@ -1,3 +1,9 @@
+function getSelectedText(elementName) {
+    let obj = document.getElementsByName(elementName)[0]
+    let index = obj.selectedIndex;
+    return obj.options[index].text
+}
+
 function openAppImport() {
     let url = document.getElementById('legadoUrl').value
     window.location.href = 'legado://import/httpTTS?src=' + url

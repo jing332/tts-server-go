@@ -1,8 +1,8 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="zh">
 
 <head>
-    <title>ms-ra-forwarder</title>
+    <title>Azure接口</title>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet"
@@ -22,8 +22,8 @@
         <div class="collapse navbar-collapse" id="navbarSupportedContent">
             <ul class="navbar-nav me-auto mb-2 mb-lg-0">
                 <li class="nav-item"><a class="nav-link" href="/">Edge接口</a></li>
-                <li class="nav-item"><a class="nav-link active" href="/azure.html">Azure接口</a></li>
-                <li class="nav-item"><a class="nav-link" href="/creation.html">Creation接口</a></li>
+                <li class="nav-item"><a class="nav-link active" href="azure.html">Azure接口</a></li>
+                <li class="nav-item"><a class="nav-link" href="creation.html">Creation接口</a></li>
             </ul>
             <p class="fst-italic">本页面源码修改自 <a href="https://github.com/wxxxcxx/ms-ra-forwarder">ms-ra-forwarder</a>
             </p>
@@ -45,22 +45,21 @@
     <form>
         <div class="row">
             <div class="col">
-                <label for="name" class="form-label">配置名称：</label>
+                <label class="form-label">配置名称：</label>
                 <input name="name" type="text" class="form-control" value="微软TTS"/>
                 <div class="form-text">在阅读APP中显示的名称。</div>
             </div>
         </div>
         <div class="row">
             <div class="col">
-                <label for="language" class="form-label">语言：</label>
-                <select name="language" class="form-select" onchange="updateLanguageConfig()">
-                </select>
+                <label class="form-label">语言：</label>
+                <select name="language" class="form-select" onchange="updateLanguageConfig()"></select>
                 <div class="form-text">选择所用语言</div>
             </div>
         </div>
         <div class="row">
             <div class="col">
-                <label for="voiceName" class="form-label">声音：</label>
+                <label class="form-label">声音：</label>
                 <select name="voiceName" class="form-select" onchange="updateVoiceConfig()">
                 </select>
                 <div class="form-text">声音列表加载可能有点慢，请稍等一下！</div>
@@ -68,14 +67,14 @@
         </div>
         <div class="row">
             <div class="col">
-                <label for="styleName" class="form-label">风格：</label>
+                <label class="form-label">风格：</label>
                 <select name="styleName" class="form-select" onchange="updateName()">
                     <option value="general">普通</option>
                 </select>
                 <div class="form-text">指定讲话风格。 说话风格特定于语音。</div>
             </div>
             <div class="col">
-                <label for="styleDegree" class="form-label">风格强度：</label>
+                <label class="form-label">风格强度：</label>
                 <input name="styleDegree" class="form-control" type="number" min="0.1" max="2.0" step="0.1"
                        value="1.0">
                 <div class="form-text">指定说话风格的强度。 接受的值：0.01 到 2（含边界值）。 默认值为 1，表示预定义的风格强度。 最小单位为 0.01，表示略倾向于目标风格。 值为
@@ -84,7 +83,7 @@
                 </div>
             </div>
             <div class="col">
-                <label for="roleName" class="form-label">角色：</label>
+                <label class="form-label">角色：</label>
                 <select name="roleName" class="form-select" disabled="disabled" onchange="updateName()">
                     <option value="default">默认</option>
                 </select>
@@ -93,7 +92,7 @@
         </div>
         <div class="row">
             <div class="col">
-                <label for="voiceFormat" class="form-label">音频格式：</label>
+                <label class="form-label">音频格式：</label>
                 <select name="voiceFormat" class="form-select">
                     <option value="raw-16khz-16bit-mono-pcm">raw-16khz-16bit-mono-pcm</option>
                     <option value="raw-48khz-16bit-mono-pcm">raw-48khz-16bit-mono-pcm</option>
@@ -130,7 +129,7 @@
 
             <div class="row">
                 <div>
-                    <label for="token" class="form-label">凭据（TOKEN）：</label>
+                    <label class="form-label">凭据（TOKEN）：</label>
                     <input name="token" class="form-control" type="text" value="">
                     <div class="form-text">如果没有设置 -token 命令行参数请为空。</div>
                 </div>
@@ -138,7 +137,7 @@
 
             <div class="row">
                 <div class="col">
-                    <label for="previewText" class="form-label">测试文本：</label>
+                    <label class="form-label">测试文本：</label>
                     <textarea name="previewText" class="form-control" rows="3"
                               cols="">如果喜欢这个项目的话请点个 Star 吧。</textarea>
                 </div>
@@ -206,7 +205,7 @@
     let voices = {};
     fetch('/api/azure/voices')
         .then(response => {
-            if (response.status == 200) {
+            if (response.status === 200) {
                 return response.json();
             } else {
                 console.log(response);
@@ -246,13 +245,6 @@
         updateLanguageConfig();
     }
 
-    function getSelectedText(elementName) {
-        let obj = document.getElementsByName(elementName)[0]
-        let index = obj.selectedIndex; // 选中索引
-        let text = obj.options[index].text; // 选中文本
-        return text
-    }
-
     function updateName() {
         let voiceName = document.getElementsByName('voiceName')[0].value;
         let styleName = getSelectedText("styleName")
@@ -265,14 +257,25 @@
         let language = document.getElementsByName('language')[0].value;
         let voiceElement = document.getElementsByName('voiceName')[0]
         voiceElement.innerHTML = ''
+
+        let voiceMap = new Map()
         voices.forEach(value => {
-            if (value['Locale'] === language) {
-                let option = document.createElement('option');
-                option.value = value['ShortName'];
-                option.innerText = value['LocalName'] + ' (' + value['ShortName'] + ')'
-                voiceElement.append(option)
-            }
+            if (value['Locale'] === language)
+                voiceMap.set(value['ShortName'], value['LocalName'] + ' (' + value['ShortName'] + ')')
+
         })
+
+        //对发音人列表进行排序(因为这个接口数据比较乱)
+        const sortMap = new Map([...voiceMap.entries()].sort((a, b) => a[1].localeCompare(b[1])));
+        sortMap.forEach((value, key) => {
+            let option = document.createElement('option');
+            option.value = key
+            option.innerText = value
+            if (key === 'zh-CN-XiaoxiaoNeural') option.selected = true
+
+            voiceElement.appendChild(option)
+        })
+
         updateVoiceConfig()
     }
 
@@ -314,7 +317,7 @@
     }
 
     function createSSML(text, voiceName, styleName, styleDegree, roleName) {
-        let ssml = `\
+        return `\
         <speak xmlns="http://www.w3.org/2001/10/synthesis" xmlns:mstts="http://www.w3.org/2001/mstts" xmlns:emo="http://www.w3.org/2009/10/emotionml" version="1.0" xml:lang="en-US">\
           <voice name="${voiceName}">\
             <mstts:express-as style="${styleName}" styledegree="${styleDegree}" role="${roleName}">\
@@ -323,9 +326,7 @@
               </prosody >\
             </mstts:express-as>
           </voice >\
-        </speak > `
-
-        return ssml;
+        </speak > `;
     }
 
     function preview() {
@@ -355,7 +356,7 @@
             headers: headers,
             body: body
         }).then(response => {
-            if (response.status == 200) {
+            if (response.status === 200) {
                 let audioSize = response.headers.get("Content-Length")
                 let elapsedTme = Date.now() - startTime
                 textInfo.innerText =
@@ -387,7 +388,6 @@
         let roleName = document.getElementsByName('roleName')[0].value;
         let voiceFormat = document.getElementsByName('voiceFormat')[0].value;
         let token = document.getElementsByName('token')[0].value;
-        let previewText = document.getElementsByName('previewText')[0].value;
         let url = window.location.protocol + '//' + window.location.host + '/api/legado?api=' +
             encodeURI(window.location.protocol + '//' + window.location.host + '/api/azure')
             + '&name=' + encodeURI(name)
