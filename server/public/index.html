@@ -34,6 +34,7 @@
     <div class="alert alert-primary" role="alert">
         手机版请在右上角菜单切换到其他接口
     </div>
+
     <form>
         <div class="row">
             <div class="col">
@@ -44,7 +45,7 @@
         </div>
         <div class="row">
             <div class="col">
-                <label  class="form-label">语言：</label>
+                <label class="form-label">语言：</label>
                 <select name="language" class="form-select" onchange="updateLanguageConfig()">
                 </select>
                 <div class="form-text">选择所用语言</div>
@@ -52,7 +53,7 @@
         </div>
         <div class="row">
             <div class="col">
-                <label  class="form-label">声音：</label>
+                <label class="form-label">声音：</label>
                 <select name="voiceName" class="form-select" onchange="updateConfigName()">
                 </select>
                 <div class="form-text">声音列表加载可能有点慢，请耐心等待！</div>
@@ -60,7 +61,7 @@
         </div>
         <div class="row">
             <div class="col">
-                <label  class="form-label">音频格式：</label>
+                <label class="form-label">音频格式：</label>
                 <select name="voiceFormat" class="form-select">
                     <option value="webm-24khz-16bit-mono-opus" selected>webm-24khz-16bit-mono-opus</option>
                     <option value="audio-24khz-48kbitrate-mono-mp3">audio-24khz-48kbitrate-mono-mp3</option>
@@ -73,7 +74,7 @@
 
             <div class="row">
                 <div>
-                    <label  class="form-label">凭据（TOKEN）：</label>
+                    <label class="form-label">凭据（TOKEN）：</label>
                     <input name="token" class="form-control" type="text" value="">
                     <div class="form-text">如果没有设置 -token 命令行参数请为空。</div>
                 </div>
@@ -97,8 +98,16 @@
                     <button id="previewButton" type="button" class="btn btn-secondary"
                             onclick="preview()">测试
                     </button>
-                    <button type="button" class="btn btn-primary" onclick='createLegadoUrl()'>生成阅读（legado）语音引擎链接
-                    </button>
+                    <div class="btn-group">
+                        <button type="button" class="btn btn-primary active" onclick="createLegadoUrl()">生成导入链接</button>
+                        <button type="button" class="btn btn-primary" onclick="openSettingsModal()">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor"
+                                 class="bi bi-sliders" viewBox="0 0 16 16">
+                                <path d="M8 4.754a3.246 3.246 0 1 0 0 6.492 3.246 3.246 0 0 0 0-6.492zM5.754 8a2.246 2.246 0 1 1 4.492 0 2.246 2.246 0 0 1-4.492 0z"/>
+                                <path d="M9.796 1.343c-.527-1.79-3.065-1.79-3.592 0l-.094.319a.873.873 0 0 1-1.255.52l-.292-.16c-1.64-.892-3.433.902-2.54 2.541l.159.292a.873.873 0 0 1-.52 1.255l-.319.094c-1.79.527-1.79 3.065 0 3.592l.319.094a.873.873 0 0 1 .52 1.255l-.16.292c-.892 1.64.901 3.434 2.541 2.54l.292-.159a.873.873 0 0 1 1.255.52l.094.319c.527 1.79 3.065 1.79 3.592 0l.094-.319a.873.873 0 0 1 1.255-.52l.292.16c1.64.893 3.434-.902 2.54-2.541l-.159-.292a.873.873 0 0 1 .52-1.255l.319-.094c1.79-.527 1.79-3.065 0-3.592l-.319-.094a.873.873 0 0 1-.52-1.255l.16-.292c.893-1.64-.902-3.433-2.541-2.54l-.292.159a.873.873 0 0 1-1.255-.52l-.094-.319zm-2.633.283c.246-.835 1.428-.835 1.674 0l.094.319a1.873 1.873 0 0 0 2.693 1.115l.291-.16c.764-.415 1.6.42 1.184 1.185l-.159.292a1.873 1.873 0 0 0 1.116 2.692l.318.094c.835.246.835 1.428 0 1.674l-.319.094a1.873 1.873 0 0 0-1.115 2.693l.16.291c.415.764-.42 1.6-1.185 1.184l-.291-.159a1.873 1.873 0 0 0-2.693 1.116l-.094.318c-.246.835-1.428.835-1.674 0l-.094-.319a1.873 1.873 0 0 0-2.692-1.115l-.292.16c-.764.415-1.6-.42-1.184-1.185l.159-.291A1.873 1.873 0 0 0 1.945 8.93l-.319-.094c-.835-.246-.835-1.428 0-1.674l.319-.094A1.873 1.873 0 0 0 3.06 4.377l-.16-.292c-.415-.764.42-1.6 1.185-1.184l.292.159a1.873 1.873 0 0 0 2.692-1.115l.094-.319z"/>
+                            </svg>
+                        </button>
+                    </div>
                 </div>
             </div>
         </div>
@@ -106,8 +115,32 @@
     <div style="height:50px"></div>
 </div>
 
+<div id="setIntervalModel" class="modal fade" data-bs-backdrop="static" data-bs-keyboard="false" tabindex="-1"
+     aria-labelledby="staticBackdropLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">导入链接设置</h5>
+            </div>
+            <div class="modal-body">
+                <label>
+                    并发率(请求间隔 单位:毫秒):
+                    <input class="form-control" id="intervalValue" type="number" value="5000" max="100000">
+                </label>
+            </div>
+            <i class="bi bi-gear"></i>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+                <button type="button" class="btn btn-primary" data-bs-dismiss="modal" onclick="
+                    localStorage.setItem('interval', document.getElementById('intervalValue').value)
+                ">保存
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
 
-<div id="legadoUrlModal" class="modal " tabindex="-1">
+<div id="legadoUrlModal" class="modal" tabindex="-1">
     <div class="modal-dialog modal-lg">
         <div class="modal-content">
             <div class="modal-header">
@@ -135,6 +168,8 @@
         </div>
     </div>
 </div>
+
+<script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.11.2/dist/umd/popper.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/github-buttons@2.22.0/dist/buttons.min.js"
         integrity="sha256-zBTHKVsRTDK5S/yvjJBOI9aarZKLhveQ0i53mMIPbe0=" crossorigin="anonymous"></script>
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"
@@ -285,12 +320,13 @@
         let voiceName = document.getElementsByName('voiceName')[0].value;
         let voiceFormat = document.getElementsByName('voiceFormat')[0].value;
         let token = document.getElementsByName('token')[0].value;
+        let interval = localStorage.getItem('interval') || 5000
         let url = window.location.protocol + '//' + window.location.host + '/api/legado?api=' + encodeURI(window.location.protocol + '//' + window.location.host + '/api/ra')
             + '&name=' + encodeURI(name)
             + '&voiceName=' + voiceName
             + '&voiceFormat=' + voiceFormat
             + '&token=' + token
-            + '&concurrentRate=1000'
+            + '&concurrentRate=' + interval
         let svg = new QRCode(url).svg();
         let modal = new bootstrap.Modal(document.getElementById('legadoUrlModal'))
         modal.show();
@@ -298,6 +334,7 @@
         document.getElementById('legadoUrl').value = url;
         localStorage.setItem("token", token)
     }
+
 
 </script>
 </body>

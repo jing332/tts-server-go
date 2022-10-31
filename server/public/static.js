@@ -1,14 +1,23 @@
+/* 打开导入链接设置对话框 */
+function openSettingsModal() {
+    let model = new bootstrap.Modal(document.getElementById('setIntervalModel'))
+    document.getElementById('intervalValue').value = localStorage.getItem('interval') || 5000
+    model.show()
+}
+
 function getSelectedText(elementName) {
     let obj = document.getElementsByName(elementName)[0]
     let index = obj.selectedIndex;
     return obj.options[index].text
 }
 
+/* 一键导入到阅读APP */
 function openAppImport() {
     let url = document.getElementById('legadoUrl').value
     window.location.href = 'legado://import/httpTTS?src=' + url
 }
 
+/* 复制导入链接 */
 function copyLegadoUrl() {
     setTimeout(function () {
         document.getElementById("copyButton").innerText = "一键复制"
