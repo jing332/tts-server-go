@@ -8,14 +8,12 @@ function openSettingsModal() {
 /* 导入链接页面的二维码按钮点击 */
 function onQRCodeClick() {
     let qrCodeElement = document.getElementById('legadoUrlQRCode')
-    if (!qrCodeElement.innerHTML) {
-        let url = document.getElementById('legadoUrl').value
-        new QRCode(qrCodeElement, {
-            text: url,
-            width: 128,
-            height: 128
-        });
-    }
+    let url = document.getElementById('legadoUrl').value
+    qrCodeElement.innerHTML = ''
+    new QRCode(qrCodeElement, {
+        text: url
+    });
+
 }
 
 function getSelectedText(elementName) {
