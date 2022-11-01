@@ -5,8 +5,7 @@
     <title>Creation接口</title>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet"
-          integrity="sha384-1BmE4kWBq78iYhFldvKuhfTAU6auU8tT94WrHftjDbrCEXSU1oBoqyl2QvZ6jIW3" crossorigin="anonymous">
+    <link href="https://cdn.staticfile.org/bootstrap/5.2.2/css/bootstrap.min.css" rel="stylesheet">
 </head>
 
 <body>
@@ -185,30 +184,36 @@
         </div>
     </div>
 </div>
-
-<div id="legadoUrlModal" class="modal " tabindex="-1">
-    <div class="modal-dialog modal-lg">
+<div id="legadoUrlModal" class="modal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content">
             <div class="modal-header">
                 <h5 class="modal-title">阅读链接</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
+            <div class="collapse" id="qrCodeCollapse">
+                <div class="card card-body">
+                    <div id="legadoUrlQRCode" style="margin: auto"></div>
+                </div>
+            </div>
             <div class="modal-body">
-                <div id="legadoUrlQRCode" style="text-align:center">
-                </div>
-                <div style="height:10px"></div>
-                <div class="row">
-                    <div class="col" style="text-align: center">
-                        <button id="copyButton" class="btn btn-primary" onclick="copyLegadoUrl()">一键复制</button>
-                        <button id="importButton" class="btn btn-primary" onclick="openAppImport()">一键导入</button>
-                    </div>
-                </div>
-                <div style="height:10px"></div>
-                <textarea id="legadoUrl" class="form-control" readonly rows="3" cols="2"></textarea>
-                <div>
+                <div style="position: relative">
+                    <textarea id="legadoUrl" class="form-control" readonly rows="3" cols="2"></textarea>
+                    <button id="copyBtn" class="btn btn-dark btn-sm"
+                            style="--bs-btn-font-size: 10px;position:absolute;right:0;top:0;z-index: 20"
+                            onclick="copyLegadoUrl()">复制
+                    </button>
+
                 </div>
                 <div class="alert alert-primary" role="alert">
                     请在阅读的朗读引擎设置中选择网络导入此链接。
+                </div>
+                <div class="modal-footer">
+                    <button class="btn btn-primary" type="button" data-bs-toggle="collapse"
+                            data-bs-target="#qrCodeCollapse" aria-expanded="false" aria-controls="qrCodeCollapse" onclick="onQRCodeClick()">
+                        二维码
+                    </button>
+                    <button type="button" class="btn btn-success" onclick="openAppImport()">一键导入</button>
                 </div>
             </div>
         </div>
@@ -216,13 +221,10 @@
 </div>
 
 
-<script src="https://cdn.jsdelivr.net/npm/github-buttons@2.22.0/dist/buttons.min.js"
-        integrity="sha256-zBTHKVsRTDK5S/yvjJBOI9aarZKLhveQ0i53mMIPbe0=" crossorigin="anonymous"></script>
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"
-        integrity="sha384-ka7Sk0Gln4gmtz2MlQnikT1wXgYsOg+OMhuP+IlRH9sENBO0LRn5q+8nbTov4+1p"
-        crossorigin="anonymous"></script>
-<script src="https://cdn.jsdelivr.net/npm/qrcode-svg@1.1.0/lib/qrcode.min.js"></script>
-<script src="static.js"></script>
+<script src=https://cdn.staticfile.org/github-buttons/2.22.0/buttons.min.js></script>
+<script src="https://cdn.staticfile.org/bootstrap/5.2.2/js/bootstrap.bundle.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@keeex/qrcodejs-kx@1.0.2/qrcode.min.js"></script>
+<script src="static.js?v1.0.0"></script>
 <script>
     let token = localStorage.getItem("token")
     document.getElementsByName('token')[0].value = token
@@ -435,10 +437,14 @@
             + '&isCreation=1'
             + '&token=' + token
             + '&concurrentRate=' + interval
-        let svg = new QRCode(url).svg();
+
         let modal = new bootstrap.Modal(document.getElementById('legadoUrlModal'))
+        /* 折叠二维码 */
+        let bsCollapse = new bootstrap.Collapse(document.getElementById('qrCodeCollapse'), {
+            toggle: false
+        })
+        bsCollapse.hide()
         modal.show();
-        document.getElementById('legadoUrlQRCode').innerHTML = svg;
         document.getElementById('legadoUrl').value = url;
         localStorage.setItem("token", token)
     }

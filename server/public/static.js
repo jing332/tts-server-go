@@ -5,6 +5,19 @@ function openSettingsModal() {
     model.show()
 }
 
+/* 导入链接页面的二维码按钮点击 */
+function onQRCodeClick() {
+    let qrCodeElement = document.getElementById('legadoUrlQRCode')
+    if (!qrCodeElement.innerHTML) {
+        let url = document.getElementById('legadoUrl').value
+        new QRCode(qrCodeElement, {
+            text: url,
+            width: 128,
+            height: 128
+        });
+    }
+}
+
 function getSelectedText(elementName) {
     let obj = document.getElementsByName(elementName)[0]
     let index = obj.selectedIndex;
@@ -19,26 +32,26 @@ function openAppImport() {
 
 /* 复制导入链接 */
 function copyLegadoUrl() {
+    let copyBtn = document.getElementById('copyBtn')
+    copyBtn.disabled = true
     setTimeout(function () {
-        document.getElementById("copyButton").innerText = "一键复制"
-    }, 3000)
+        copyBtn.innerText = "复制"
+        copyBtn.disabled = false
+    }, 2000)
 
     try {
         document.getElementById("legadoUrl").select()
         let ok = document.execCommand("copy");
-        if (ok) {
-            document.getElementById("copyButton").innerText = "已复制到剪贴板"
-        } else {
-            document.getElementById("copyButton").innerText = "复制失败 请手动复制"
-        }
+        if (ok) copyBtn.innerText = "已复制到剪贴板"
+        else copyBtn.innerText = "复制失败 请手动复制"
     } catch (e) {
-        document.getElementById("copyButton").innerText = "复制失败 请手动复制"
+        copyBtn.innerText = "复制失败 请手动复制"
     }
 }
 
 /* 单位转换 */
 function unitConversion(limit) {
-    let size = "";
+    let size;
     if (limit < 0.1 * 1024) {                            //小于0.1KB，则转化成B
         size = limit.toFixed(2) + "B"
     } else if (limit < 0.1 * 1024 * 1024) {            //小于0.1MB，则转化成KB
@@ -52,7 +65,7 @@ function unitConversion(limit) {
     let sizeStr = size + "";                        //转成字符串
     let index = sizeStr.indexOf(".");                    //获取小数点处的索引
     let dou = sizeStr.substr(index + 1, 2)            //获取小数点后两位的值
-    if (dou == "00") {                                //判断后两位是否为00，如果是则删除00
+    if (dou === "00") {                                //判断后两位是否为00，如果是则删除00
         return sizeStr.substring(0, index) + sizeStr.substr(index + 3, 2)
     }
     return size;
