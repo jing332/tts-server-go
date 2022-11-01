@@ -330,6 +330,7 @@
             + '&token=' + token
             + '&concurrentRate=' + interval
         let modal = new bootstrap.Modal(document.getElementById('legadoUrlModal'))
+        document.getElementById('legadoUrlQRCode').innerHTML = ''
         /* 折叠二维码 */
         let bsCollapse = new bootstrap.Collapse(document.getElementById('qrCodeCollapse'), {
             toggle: false

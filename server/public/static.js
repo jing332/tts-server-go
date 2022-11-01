@@ -9,11 +9,11 @@ function openSettingsModal() {
 function onQRCodeClick() {
     let qrCodeElement = document.getElementById('legadoUrlQRCode')
     let url = document.getElementById('legadoUrl').value
-    qrCodeElement.innerHTML = ''
-    new QRCode(qrCodeElement, {
-        text: url
-    });
-
+    if (!qrCodeElement.innerHTML) {
+        new QRCode(qrCodeElement, {
+            text: url
+        });
+    }
 }
 
 function getSelectedText(elementName) {
