@@ -152,9 +152,11 @@ func GetVoices() ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-	req.Header.Add("User-Agent", "Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/86.0.4240.198 Safari/537.36")
-	req.Header.Add("X-Ms-Useragent", "SpeechStudio/2021.05.001")
-	req.Header.Add("Content-Type", "application/json")
+	req.Header.Set("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/107.0.0.0 Safari/537.36 Edg/107.0.1418.26")
+	req.Header.Set("X-Ms-Useragent", "SpeechStudio/2021.05.001")
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Origin", "https://azure.microsoft.com")
+	req.Header.Set("Referer", "https://azure.microsoft.com")
 
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
