@@ -68,12 +68,33 @@ func (t *TTS) GetAudioUseContext(ctx context.Context, arg *SpeakArg) (audio []by
 	if err != nil {
 		if errors.Is(err, TokenErr) { /* Token已失效 */
 			t.token = ""
-			audio, err = t.GetAudio(arg)
+			audio, err = t.GetAudioUseContext(ctx, arg)
 		} else {
 			return nil, err
 		}
 	}
 
+	return audio, nil
+}
+
+func (t *TTS) GetAudioUseContextBySsml(ctx context.Context, ssml, format string) ([]byte, error) {
+	if t.token == "" {
+		s, err := GetToken()
+		if err != nil {
+			return nil, err
+		}
+		t.token = s
+	}
+
+	audio, err := speakBySsml(t.Client, ctx, t.token, ssml, format)
+	if err != nil {
+		if errors.Is(err, TokenErr) { /* Token已失效 */
+			t.token = ""
+			audio, err = t.GetAudioUseContextBySsml(ctx, ssml, format)
+		} else {
+			return nil, err
+		}
+	}
 	return audio, nil
 }
 
@@ -83,9 +104,13 @@ func speak(client *http.Client, ctx context.Context, token string, arg *SpeakArg
 		arg.VoiceName + `\",\"Locale\":\"zh-CN\",\"VoiceType\":\"StandardVoice\"}]}-->\n<!--ID=5B95B1CC-2C7B-494F-B746-CF22A0E779B7;Version=1|{\"Locales\":{\"zh-CN\":{\"AutoApplyCustomLexiconFiles\":[{}]}}}-->\n<speak version=\"1.0\" xmlns=\"http://www.w3.org/2001/10/synthesis\" xmlns:mstts=\"http://www.w3.org/2001/mstts\" xmlns:emo=\"http://www.w3.org/2009/10/emotionml\" xml:lang=\"zh-CN\"><voice name=\"` +
 		arg.VoiceName + `\"><lang xml:lang=\"zh-CN\"><mstts:express-as style=\"` + arg.Style + `\" styledegree=\"` + arg.StyleDegree + `\" role=\"` +
 		arg.Role + `\"><prosody rate=\"` + arg.Rate + `\" volume=\"` + arg.Volume + `\">` + arg.Text + `</prosody></mstts:express-as></lang></voice></speak>`
+	return speakBySsml(client, ctx, token, ssml, arg.Format)
+}
+
+func speakBySsml(client *http.Client, ctx context.Context, token, ssml, format string) ([]byte, error) {
 	payload := strings.NewReader(`{
     "ssml": "` + ssml + `",
-    "ttsAudioFormat": "` + arg.Format + `",
+    "ttsAudioFormat": "` + format + `",
     "offsetInPlainText": 0,
     "lengthInPlainText":` + "300" +
 		`,"properties": {
