@@ -57,8 +57,8 @@ func (c *CreationJson) VoiceProperty() *service.VoiceProperty {
 		err = nil
 	}
 
-	prosody := service.Prosody{Rate: int8(rate), Volume: int8(volume)}
-	expressAs := service.ExpressAs{Style: c.Style, StyleDegree: float32(styleDegree), Role: c.Role}
+	prosody := &service.Prosody{Rate: int8(rate), Volume: int8(volume)}
+	expressAs := &service.ExpressAs{Style: c.Style, StyleDegree: float32(styleDegree), Role: c.Role}
 	return &service.VoiceProperty{VoiceName: c.VoiceName, VoiceId: c.VoiceId, Prosody: prosody, ExpressAs: expressAs}
 }
 
@@ -66,11 +66,6 @@ func (c *CreationJson) VoiceProperty() *service.VoiceProperty {
 func removePcmChar(s string) string {
 	return strings.ReplaceAll(s, "%", "")
 }
-
-//func FromVoiceProperty(pro *service.VoiceProperty) *CreationJson {
-//	return &CreationJson{VoiceName: pro.VoiceName, VoiceId: pro.VoiceId, Rate: strconv.Itoa(pro.Rate), Volume: pro.Volume,
-//		Style: pro.Style, StyleDegree: pro.StyleDegree, Role: pro.Role}
-//}
 
 /* 生成阅读APP朗读朗读引擎Json (Edge, Azure) */
 func genLegodoJson(api, name, voiceName, styleName, styleDegree, roleName, voiceFormat, token, concurrentRate string) ([]byte, error) {
@@ -115,9 +110,6 @@ func genLegadoCreationJson(api, name string, creationJson *CreationJson, token, 
 	}
 
 	t := time.Now().UnixNano() / 1e6 //毫秒时间戳
-	//urlJsonStr := `{"text":"{{String(speakText).replace(/&/g, '&amp;').replace(/\"/g, '&quot;').replace(/'/g, '&apos;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/\\/g, '')}}","voiceName":"` +
-	//	pro.VoiceName + `","voiceId":"` + pro.VoiceId + `","rate":"{{(speakSpeed -10) * 2}}","style":"` + pro.Style + `","styleDegree":"` + styleDegree +
-	//	`","role":"` + pro.Role + `","volume":"0%","format":"` + voiceFormat + `"}`
 	url := api + `,{"method":"POST","body":` + string(jsonBuf.Bytes()) + `}`
 	head := `{"Content-Type":"application/json", "Token":"` + token + `"}`
 
