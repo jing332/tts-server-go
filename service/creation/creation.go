@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	tts_server_go "github.com/jing332/tts-server-go"
+	"github.com/jing332/tts-server-go/service"
 	"io"
 	"net/http"
 	"strings"
@@ -33,15 +34,23 @@ func New() *TTS {
 	return &TTS{Client: &http.Client{}}
 }
 
-type SpeakArg struct {
-	Text, VoiceName, VoiceId, Rate, Style, StyleDegree, Role, Volume, Format string
+// ToSsml 转为完整的SSML
+func ToSsml(text string, pro *service.VoiceProperty) string {
+	pro.Api = service.ApiCreation
+	ssml := `<!--ID=B7267351-473F-409D-9765-754A8EBCDE05;Version=1|{\"VoiceNameToIdMapItems\":[{\"Id\":\"` +
+		pro.VoiceId + `\",\"Name\":\"Microsoft Server Speech Text to Speech Voice (zh-CN, XiaoxiaoNeural)\",\"ShortName\":\"` +
+		pro.VoiceName + `\",\"Locale\":\"zh-CN\",\"VoiceType\":\"StandardVoice\"}]}-->\n<!--ID=5B95B1CC-2C7B-494F-B746-CF22A0E779B7;Version=1|{\"Locales\":{\"zh-CN\":{\"AutoApplyCustomLexiconFiles\":[{}]}}}-->\n` +
+		`<speak version=\"1.0\" xmlns=\"http://www.w3.org/2001/10/synthesis\" xmlns:mstts=\"http://www.w3.org/2001/mstts\" xmlns:emo=\"http://www.w3.org/2009/10/emotionml\" xml:lang=\"zh-CN\">` +
+		strings.ReplaceAll(pro.ElementString(text), `"`, `\"`) + `</speak>`
+
+	return ssml
 }
 
-func (t *TTS) GetAudio(arg *SpeakArg) (audio []byte, err error) {
-	return t.GetAudioUseContext(nil, arg)
+func (t *TTS) GetAudio(text, format string, pro *service.VoiceProperty) (audio []byte, err error) {
+	return t.GetAudioUseContext(nil, text, format, pro)
 }
 
-func (t *TTS) GetAudioUseContext(ctx context.Context, arg *SpeakArg) (audio []byte, err error) {
+func (t *TTS) GetAudioUseContext(ctx context.Context, text, format string, pro *service.VoiceProperty) (audio []byte, err error) {
 	if t.token == "" {
 		s, err := GetToken()
 		if err != nil {
@@ -51,12 +60,10 @@ func (t *TTS) GetAudioUseContext(ctx context.Context, arg *SpeakArg) (audio []by
 	}
 
 	/* 接口限制 文本长度不能超300 */
-	if utf8.RuneCountInString(arg.Text) > 295 {
-		chunks := tts_server_go.ChunkString(arg.Text, 290)
+	if utf8.RuneCountInString(text) > 295 {
+		chunks := tts_server_go.ChunkString(text, 290)
 		for _, v := range chunks {
-			tmpArg := arg
-			tmpArg.Text = v
-			data, err := t.GetAudio(tmpArg)
+			data, err := t.GetAudioUseContext(ctx, v, format, pro)
 			if err != nil {
 				return nil, err
 			}
@@ -64,11 +71,13 @@ func (t *TTS) GetAudioUseContext(ctx context.Context, arg *SpeakArg) (audio []by
 		}
 		return audio, nil
 	}
-	audio, err = speak(t.Client, ctx, t.token, arg)
+
+	ssml := ToSsml(text, pro)
+	audio, err = t.speakBySsml(ctx, ssml, format)
 	if err != nil {
 		if errors.Is(err, TokenErr) { /* Token已失效 */
 			t.token = ""
-			audio, err = t.GetAudioUseContext(ctx, arg)
+			audio, err = t.GetAudioUseContext(ctx, text, format, pro)
 		} else {
 			return nil, err
 		}
@@ -77,37 +86,7 @@ func (t *TTS) GetAudioUseContext(ctx context.Context, arg *SpeakArg) (audio []by
 	return audio, nil
 }
 
-func (t *TTS) GetAudioUseContextBySsml(ctx context.Context, ssml, format string) ([]byte, error) {
-	if t.token == "" {
-		s, err := GetToken()
-		if err != nil {
-			return nil, err
-		}
-		t.token = s
-	}
-
-	audio, err := speakBySsml(t.Client, ctx, t.token, ssml, format)
-	if err != nil {
-		if errors.Is(err, TokenErr) { /* Token已失效 */
-			t.token = ""
-			audio, err = t.GetAudioUseContextBySsml(ctx, ssml, format)
-		} else {
-			return nil, err
-		}
-	}
-	return audio, nil
-}
-
-func speak(client *http.Client, ctx context.Context, token string, arg *SpeakArg) ([]byte, error) {
-	ssml := `<!--ID=B7267351-473F-409D-9765-754A8EBCDE05;Version=1|{\"VoiceNameToIdMapItems\":[{\"Id\":\"` +
-		arg.VoiceId + `\",\"Name\":\"Microsoft Server Speech Text to Speech Voice (zh-CN, XiaoxiaoNeural)\",\"ShortName\":\"` +
-		arg.VoiceName + `\",\"Locale\":\"zh-CN\",\"VoiceType\":\"StandardVoice\"}]}-->\n<!--ID=5B95B1CC-2C7B-494F-B746-CF22A0E779B7;Version=1|{\"Locales\":{\"zh-CN\":{\"AutoApplyCustomLexiconFiles\":[{}]}}}-->\n<speak version=\"1.0\" xmlns=\"http://www.w3.org/2001/10/synthesis\" xmlns:mstts=\"http://www.w3.org/2001/mstts\" xmlns:emo=\"http://www.w3.org/2009/10/emotionml\" xml:lang=\"zh-CN\"><voice name=\"` +
-		arg.VoiceName + `\"><lang xml:lang=\"zh-CN\"><mstts:express-as style=\"` + arg.Style + `\" styledegree=\"` + arg.StyleDegree + `\" role=\"` +
-		arg.Role + `\"><prosody rate=\"` + arg.Rate + `\" volume=\"` + arg.Volume + `\">` + arg.Text + `</prosody></mstts:express-as></lang></voice></speak>`
-	return speakBySsml(client, ctx, token, ssml, arg.Format)
-}
-
-func speakBySsml(client *http.Client, ctx context.Context, token, ssml, format string) ([]byte, error) {
+func (t *TTS) speakBySsml(ctx context.Context, ssml, format string) ([]byte, error) {
 	payload := strings.NewReader(`{
     "ssml": "` + ssml + `",
     "ttsAudioFormat": "` + format + `",
@@ -125,9 +104,9 @@ func speakBySsml(client *http.Client, ctx context.Context, token, ssml, format s
 	if err != nil {
 		return nil, err
 	}
-	req.Header.Add("AccDemoPageAuthToken", token)
+	req.Header.Add("AccDemoPageAuthToken", t.token)
 	req.Header.Add("Content-Type", "application/json")
-	resp, err := client.Do(req)
+	resp, err := t.Client.Do(req)
 	if err != nil {
 		return nil, err
 	}

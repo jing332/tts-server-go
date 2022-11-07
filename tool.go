@@ -2,6 +2,7 @@ package tts_server_go
 
 import (
 	"net"
+	"regexp"
 	"time"
 )
 
@@ -52,4 +53,22 @@ func GetOutboundIPString() string {
 		return "localhost"
 	}
 	return netIp.String()
+}
+
+var charRegexp = regexp.MustCompile(`['"<>&/\\]`)
+var entityMap = map[string]string{
+	`'`: `&apos;`,
+	`"`: `&quot;`,
+	`<`: `&lt;`,
+	`>`: `&gt;`,
+	`&`: `&amp;`,
+	`/`: ``,
+	`\`: ``,
+}
+
+// SpecialCharReplace 过滤掉特殊字符
+func SpecialCharReplace(s string) string {
+	return charRegexp.ReplaceAllStringFunc(s, func(s2 string) string {
+		return entityMap[s2]
+	})
 }

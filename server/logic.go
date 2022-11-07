@@ -1,7 +1,11 @@
 package server
 
 import (
+	"bytes"
 	"encoding/json"
+	"github.com/jing332/tts-server-go/service"
+	log "github.com/sirupsen/logrus"
+	"strconv"
 	"strings"
 	"time"
 )
@@ -25,12 +29,48 @@ type CreationJson struct {
 	VoiceName   string `json:"voiceName"`
 	VoiceId     string `json:"voiceId"`
 	Rate        string `json:"rate"`
+	Volume      string `json:"volume"`
 	Style       string `json:"style"`
 	StyleDegree string `json:"styleDegree"`
 	Role        string `json:"role"`
-	Volume      string `json:"volume"`
 	Format      string `json:"format"`
 }
+
+func (c *CreationJson) VoiceProperty() *service.VoiceProperty {
+	rate, err := strconv.ParseInt(removePcmChar(c.Rate), 10, 8)
+	if err != nil {
+		log.Errorf("转换语速失败：%s", c.Rate)
+		rate = 0
+		err = nil
+	}
+
+	volume, err := strconv.ParseInt(removePcmChar(c.Volume), 10, 8)
+	if err != nil {
+		log.Errorf("转换音量失败：%s", c.Volume)
+		volume = 0
+		err = nil
+	}
+	styleDegree, err := strconv.ParseFloat(c.StyleDegree, 10)
+	if err != nil {
+		log.Errorf("转换风格强度失败：%s", c.StyleDegree)
+		volume = 0
+		err = nil
+	}
+
+	prosody := service.Prosody{Rate: int8(rate), Volume: int8(volume)}
+	expressAs := service.ExpressAs{Style: c.Style, StyleDegree: float32(styleDegree), Role: c.Role}
+	return &service.VoiceProperty{VoiceName: c.VoiceName, VoiceId: c.VoiceId, Prosody: prosody, ExpressAs: expressAs}
+}
+
+// 移除字符串中 % 符号
+func removePcmChar(s string) string {
+	return strings.ReplaceAll(s, "%", "")
+}
+
+//func FromVoiceProperty(pro *service.VoiceProperty) *CreationJson {
+//	return &CreationJson{VoiceName: pro.VoiceName, VoiceId: pro.VoiceId, Rate: strconv.Itoa(pro.Rate), Volume: pro.Volume,
+//		Style: pro.Style, StyleDegree: pro.StyleDegree, Role: pro.Role}
+//}
 
 /* 生成阅读APP朗读朗读引擎Json (Edge, Azure) */
 func genLegodoJson(api, name, voiceName, styleName, styleDegree, roleName, voiceFormat, token, concurrentRate string) ([]byte, error) {
@@ -56,16 +96,32 @@ func genLegodoJson(api, name, voiceName, styleName, styleDegree, roleName, voice
 	return body, nil
 }
 
+const (
+	textVar = "{{String(speakText).replace(/&/g, '&amp;').replace(/\"/g, '&quot;').replace(/'/g, '&apos;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/\\/g, '')}}"
+	rateVar = "{{(speakSpeed -10) * 2}}"
+)
+
 /* 生成阅读APP朗读引擎Json (Creation) */
-func genLegadoCreationJson(api, name, voiceName, voiceId, styleName, styleDegree, roleName, voiceFormat, token, concurrentRate string) ([]byte, error) {
+func genLegadoCreationJson(api, name string, creationJson *CreationJson, token, concurrentRate string) ([]byte, error) {
+	creationJson.Text = textVar
+	creationJson.Rate = rateVar
+	creationJson.Volume = "0"
+	var jsonBuf bytes.Buffer
+	encoder := json.NewEncoder(&jsonBuf)
+	encoder.SetEscapeHTML(false)
+	err := encoder.Encode(creationJson)
+	if err != nil {
+		return nil, err
+	}
+
 	t := time.Now().UnixNano() / 1e6 //毫秒时间戳
-	urlJsonStr := `{"text":"{{String(speakText).replace(/&/g, '&amp;').replace(/\"/g, '&quot;').replace(/'/g, '&apos;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/\\/g, '')}}","voiceName":"` +
-		voiceName + `","voiceId":"` + voiceId + `","rate":"{{(speakSpeed -10) * 2}}%","style":"` + styleName + `","styleDegree":"` + styleDegree +
-		`","role":"` + roleName + `","volume":"0%","format":"` + voiceFormat + `"}`
-	url := api + `,{"method":"POST","body":` + urlJsonStr + `}`
+	//urlJsonStr := `{"text":"{{String(speakText).replace(/&/g, '&amp;').replace(/\"/g, '&quot;').replace(/'/g, '&apos;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/\\/g, '')}}","voiceName":"` +
+	//	pro.VoiceName + `","voiceId":"` + pro.VoiceId + `","rate":"{{(speakSpeed -10) * 2}}","style":"` + pro.Style + `","styleDegree":"` + styleDegree +
+	//	`","role":"` + pro.Role + `","volume":"0%","format":"` + voiceFormat + `"}`
+	url := api + `,{"method":"POST","body":` + string(jsonBuf.Bytes()) + `}`
 	head := `{"Content-Type":"application/json", "Token":"` + token + `"}`
 
-	legadoJson := &LegadoJson{Name: name, URL: url, ID: t, LastUpdateTime: t, ContentType: formatContentType(voiceFormat),
+	legadoJson := &LegadoJson{Name: name, URL: url, ID: t, LastUpdateTime: t, ContentType: formatContentType(creationJson.Format),
 		Header: head, ConcurrentRate: concurrentRate}
 	body, err := json.Marshal(legadoJson)
 	return body, err

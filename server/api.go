@@ -312,12 +312,11 @@ func (s *GracefulServer) creationAPIHandler(w http.ResponseWriter, r *http.Reque
 		ttsCreation = creation.New()
 	}
 
-	arg := creation.SpeakArg(reqData)
 	var succeed = make(chan []byte)
 	var failed = make(chan error)
 	go func() {
 		for i := 0; i < 3; i++ { /* 循环3次, 成功则return */
-			data, err := ttsCreation.GetAudioUseContext(r.Context(), &arg)
+			data, err := ttsCreation.GetAudioUseContext(r.Context(), reqData.Text, reqData.Format, reqData.VoiceProperty())
 			if err != nil {
 				if errors.Is(err, context.Canceled) {
 					return
@@ -391,8 +390,10 @@ func (s *GracefulServer) legadoAPIHandler(w http.ResponseWriter, r *http.Request
 	var jsonStr []byte
 	var err error
 	if isCreation == "1" {
-		jsonStr, err = genLegadoCreationJson(apiUrl, name, voiceName, voiceId, styleName, styleDegree, roleName,
-			voiceFormat, token, concurrentRate)
+		creationJson := &CreationJson{VoiceName: voiceName, VoiceId: voiceId, Style: styleName,
+			StyleDegree: styleDegree, Role: roleName, Format: voiceFormat}
+		jsonStr, err = genLegadoCreationJson(apiUrl, name, creationJson, token, concurrentRate)
+
 	} else {
 		jsonStr, err = genLegodoJson(apiUrl, name, voiceName, styleName, styleDegree, roleName, voiceFormat, token,
 			concurrentRate)
