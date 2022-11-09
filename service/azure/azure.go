@@ -120,11 +120,63 @@ func (t *TTS) GetAudio(ssml, format string) (audioData []byte, err error) {
 	}
 }
 
+type OnRead func([]byte)
+
+func (t *TTS) GetAudioStream(ssml, format string, read OnRead) error {
+	t.uuid = tools.GetUUID()
+	if t.conn == nil {
+		err := t.NewConn()
+		if err != nil {
+			return err
+		}
+	}
+
+	running := true
+	defer func() {
+		running = false
+	}()
+	var finished = make(chan bool)
+	var failed = make(chan error)
+	t.onReadMessage = func(messageType int, p []byte, errMessage error) bool {
+		if messageType == -1 && p == nil && errMessage != nil { //已经断开链接
+			if running {
+				failed <- errMessage
+			}
+			return true
+		}
+
+		if messageType == 2 {
+			index := strings.Index(string(p), "Path:audio")
+			data := []byte(string(p)[index+12:])
+			read(data)
+		} else if messageType == 1 && string(p)[len(string(p))-14:len(string(p))-6] == "turn.end" {
+			finished <- true
+			return false
+		}
+		return false
+	}
+	err := t.sendConfigMessage(format)
+	if err != nil {
+		return err
+	}
+	err = t.sendSsmlMessage(ssml)
+	if err != nil {
+		return err
+	}
+
+	select {
+	case <-finished:
+		return nil
+	case errMessage := <-failed:
+		return errMessage
+	}
+}
+
 func (t *TTS) sendConfigMessage(format string) error {
-	time := tts_server_go.GetISOTime()
-	m1 := "Path: speech.config\r\nX-RequestId: " + t.uuid + "\r\nX-Timestamp: " + time +
+	timestamp := tts_server_go.GetISOTime()
+	m1 := "Path: speech.config\r\nX-RequestId: " + t.uuid + "\r\nX-Timestamp: " + timestamp +
 		"\r\nContent-Type: application/json\r\n\r\n{\"context\":{\"system\":{\"name\":\"SpeechSDK\",\"version\":\"1.19.0\",\"build\":\"JavaScript\",\"lang\":\"JavaScript\",\"os\":{\"platform\":\"Browser/Linux x86_64\",\"name\":\"Mozilla/5.0 (X11; Linux x86_64; rv:78.0) Gecko/20100101 Firefox/78.0\",\"version\":\"5.0 (X11)\"}}}}"
-	m2 := "Path: synthesis.context\r\nX-RequestId: " + t.uuid + "\r\nX-Timestamp: " + time +
+	m2 := "Path: synthesis.context\r\nX-RequestId: " + t.uuid + "\r\nX-Timestamp: " + timestamp +
 		"\r\nContent-Type: application/json\r\n\r\n{\"synthesis\":{\"audio\":{\"metadataOptions\":{\"sentenceBoundaryEnabled\":false,\"wordBoundaryEnabled\":false},\"outputFormat\":\"" + format + "\"}}}"
 	err := t.conn.WriteMessage(websocket.TextMessage, []byte(m1))
 	if err != nil {
