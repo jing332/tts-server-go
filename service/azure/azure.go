@@ -5,10 +5,9 @@ import (
 	"github.com/asters1/tools"
 	"github.com/gorilla/websocket"
 	tts_server_go "github.com/jing332/tts-server-go"
+	log "github.com/sirupsen/logrus"
 	"io"
 	"net/http"
-
-	log "github.com/sirupsen/logrus"
 	"strings"
 	"time"
 )
@@ -45,17 +44,26 @@ func (t *TTS) NewConn() error {
 		return err
 	}
 
+	var size = 0
 	go func() {
 		for {
 			if t.conn == nil {
 				return
 			}
 			messageType, p, err := t.conn.ReadMessage()
-			closed := t.onReadMessage(messageType, p, err)
-			if closed {
+			size += len(p)
+			if size >= 2000000 {
+				t.onReadMessage(-1, nil, &websocket.CloseError{Code: websocket.CloseAbnormalClosure})
 				t.conn = nil
 				return
+			} else {
+				closed := t.onReadMessage(messageType, p, err)
+				if closed {
+					t.conn = nil
+					return
+				}
 			}
+
 		}
 	}()
 
