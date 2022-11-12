@@ -12,7 +12,11 @@ import (
 	"time"
 )
 
-var wssUrl = `wss://speech.platform.bing.com/consumer/speech/synthesize/readaloud/edge/v1?TrustedClientToken=6A5AA1D4EAFF4E9FB37E23D68491D6F4&ConnectionId=`
+const (
+	wssUrl = `wss://speech.platform.bing.com/consumer/speech/synthesize/readaloud/edge/v1?TrustedClientToken=6A5AA1D4EAFF4E9FB37E23D68491D6F4&ConnectionId=`
+
+	writeWait = time.Second * 5
+)
 
 type TTS struct {
 	UseDnsLookup bool // 使用DNS解析，而不是北京微软云节点。
@@ -28,7 +32,7 @@ func (t *TTS) NewConn() error {
 	log.Infoln("创建WebSocket连接(Edge)...")
 	dl := websocket.Dialer{
 		EnableCompression: true,
-		HandshakeTimeout:  time.Second * 15,
+		HandshakeTimeout:  time.Second * 5,
 	}
 
 	if !t.UseDnsLookup {
@@ -74,8 +78,9 @@ func (t *TTS) NewConn() error {
 
 func (t *TTS) CloseConn() {
 	if t.conn != nil {
-		t.conn.WriteMessage(websocket.CloseMessage, nil)
-		t.conn.Close()
+		_ = t.conn.SetWriteDeadline(time.Now().Add(writeWait))
+		_ = t.conn.WriteMessage(websocket.CloseMessage, nil)
+		_ = t.conn.Close()
 		t.conn = nil
 	}
 }
@@ -90,10 +95,7 @@ func (t *TTS) GetAudio(ssml, format string) (audioData []byte, err error) {
 	}
 
 	running := true
-	defer func() {
-		running = false
-
-	}()
+	defer func() { running = false }()
 	var finished = make(chan bool)
 	var failed = make(chan error)
 	t.onReadMessage = func(messageType int, p []byte, errMessage error) bool {
@@ -104,11 +106,11 @@ func (t *TTS) GetAudio(ssml, format string) (audioData []byte, err error) {
 			return true
 		}
 
-		if messageType == 2 {
+		if messageType == websocket.BinaryMessage {
 			index := strings.Index(string(p), "Path:audio")
 			data := []byte(string(p)[index+12:])
 			audioData = append(audioData, data...)
-		} else if messageType == 1 && string(p)[len(string(p))-14:len(string(p))-6] == "turn.end" {
+		} else if messageType == websocket.TextMessage && string(p)[len(string(p))-14:len(string(p))-6] == "turn.end" {
 			finished <- true
 			return false
 		}
@@ -134,6 +136,7 @@ func (t *TTS) GetAudio(ssml, format string) (audioData []byte, err error) {
 func (t *TTS) sendConfigMessage(format string) error {
 	cfgMsg := "X-Timestamp:" + tts_server_go.GetISOTime() + "\r\nContent-Type:application/json; charset=utf-8\r\n" + "Path:speech.config\r\n\r\n" +
 		`{"context":{"synthesis":{"audio":{"metadataoptions":{"sentenceBoundaryEnabled":"false","wordBoundaryEnabled":"false"},"outputFormat":"` + format + `"}}}}`
+	_ = t.conn.SetWriteDeadline(time.Now().Add(writeWait))
 	err := t.conn.WriteMessage(websocket.TextMessage, []byte(cfgMsg))
 	if err != nil {
 		return fmt.Errorf("发送Config失败: %s", err)
@@ -144,6 +147,7 @@ func (t *TTS) sendConfigMessage(format string) error {
 
 func (t *TTS) sendSsmlMessage(ssml string) error {
 	msg := "Path: ssml\r\nX-RequestId: " + t.uuid + "\r\nX-Timestamp: " + tts_server_go.GetISOTime() + "\r\nContent-Type: application/ssml+xml\r\n\r\n" + ssml
+	_ = t.conn.SetWriteDeadline(time.Now().Add(writeWait))
 	err := t.conn.WriteMessage(websocket.TextMessage, []byte(msg))
 	if err != nil {
 		return err

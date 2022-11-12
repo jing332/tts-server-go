@@ -15,6 +15,8 @@ import (
 const (
 	wssUrl    = `wss://eastus.api.speech.microsoft.com/cognitiveservices/websocket/v1?TricType=AzureDemo&Authorization=bearer%20undefined&X-ConnectionId=`
 	voicesUrl = `https://eastus.api.speech.microsoft.com/cognitiveservices/voices/list`
+
+	writeWait = time.Second * 5
 )
 
 type TTS struct {
@@ -30,7 +32,7 @@ func (t *TTS) NewConn() error {
 	log.Infoln("创建WebSocket连接(Azure)...")
 	dl := websocket.Dialer{
 		EnableCompression: true,
-		HandshakeTimeout:  time.Second * 15,
+		HandshakeTimeout:  time.Second * 5,
 	}
 
 	head := tools.GetHeader(
@@ -52,7 +54,7 @@ func (t *TTS) NewConn() error {
 			}
 			messageType, p, err := t.conn.ReadMessage()
 			size += len(p)
-			if size >= 2000000 {
+			if size >= 2000000 { //大于2MB主动断开
 				t.onReadMessage(-1, nil, &websocket.CloseError{Code: websocket.CloseAbnormalClosure})
 				t.conn = nil
 				return
@@ -63,7 +65,6 @@ func (t *TTS) NewConn() error {
 					return
 				}
 			}
-
 		}
 	}()
 
@@ -72,8 +73,9 @@ func (t *TTS) NewConn() error {
 
 func (t *TTS) CloseConn() {
 	if t.conn != nil {
-		t.conn.WriteMessage(websocket.CloseMessage, nil)
-		t.conn.Close()
+		_ = t.conn.SetWriteDeadline(time.Now().Add(writeWait))
+		_ = t.conn.WriteMessage(websocket.CloseMessage, nil)
+		_ = t.conn.Close()
 		t.conn = nil
 	}
 }
@@ -101,11 +103,11 @@ func (t *TTS) GetAudio(ssml, format string) (audioData []byte, err error) {
 			return true
 		}
 
-		if messageType == 2 {
+		if messageType == websocket.BinaryMessage {
 			index := strings.Index(string(p), "Path:audio")
 			data := []byte(string(p)[index+12:])
 			audioData = append(audioData, data...)
-		} else if messageType == 1 && string(p)[len(string(p))-14:len(string(p))-6] == "turn.end" {
+		} else if messageType == websocket.TextMessage && string(p)[len(string(p))-14:len(string(p))-6] == "turn.end" {
 			finished <- true
 			return false
 		}
@@ -186,10 +188,12 @@ func (t *TTS) sendConfigMessage(format string) error {
 		"\r\nContent-Type: application/json\r\n\r\n{\"context\":{\"system\":{\"name\":\"SpeechSDK\",\"version\":\"1.19.0\",\"build\":\"JavaScript\",\"lang\":\"JavaScript\",\"os\":{\"platform\":\"Browser/Linux x86_64\",\"name\":\"Mozilla/5.0 (X11; Linux x86_64; rv:78.0) Gecko/20100101 Firefox/78.0\",\"version\":\"5.0 (X11)\"}}}}"
 	m2 := "Path: synthesis.context\r\nX-RequestId: " + t.uuid + "\r\nX-Timestamp: " + timestamp +
 		"\r\nContent-Type: application/json\r\n\r\n{\"synthesis\":{\"audio\":{\"metadataOptions\":{\"sentenceBoundaryEnabled\":false,\"wordBoundaryEnabled\":false},\"outputFormat\":\"" + format + "\"}}}"
+	_ = t.conn.SetWriteDeadline(time.Now().Add(writeWait))
 	err := t.conn.WriteMessage(websocket.TextMessage, []byte(m1))
 	if err != nil {
 		return fmt.Errorf("发送Config1失败: %s", err)
 	}
+	_ = t.conn.SetWriteDeadline(time.Now().Add(writeWait))
 	err = t.conn.WriteMessage(websocket.TextMessage, []byte(m2))
 	if err != nil {
 		return fmt.Errorf("发送Config2失败: %s", err)
@@ -200,6 +204,7 @@ func (t *TTS) sendConfigMessage(format string) error {
 
 func (t *TTS) sendSsmlMessage(ssml string) error {
 	msg := "Path: ssml\r\nX-RequestId: " + t.uuid + "\r\nX-Timestamp: " + tts_server_go.GetISOTime() + "\r\nContent-Type: application/ssml+xml\r\n\r\n" + ssml
+	_ = t.conn.SetWriteDeadline(time.Now().Add(writeWait))
 	err := t.conn.WriteMessage(websocket.TextMessage, []byte(msg))
 	if err != nil {
 		return fmt.Errorf("发送SSML失败: %s", err)
