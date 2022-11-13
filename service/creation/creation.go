@@ -41,7 +41,7 @@ func ToSsml(text string, pro *service.VoiceProperty) string {
 		pro.VoiceId + `\",\"Name\":\"Microsoft Server Speech Text to Speech Voice (zh-CN, XiaoxiaoNeural)\",\"ShortName\":\"` +
 		pro.VoiceName + `\",\"Locale\":\"zh-CN\",\"VoiceType\":\"StandardVoice\"}]}-->\n<!--ID=5B95B1CC-2C7B-494F-B746-CF22A0E779B7;Version=1|{\"Locales\":{\"zh-CN\":{\"AutoApplyCustomLexiconFiles\":[{}]}}}-->\n` +
 		`<speak version=\"1.0\" xmlns=\"http://www.w3.org/2001/10/synthesis\" xmlns:mstts=\"http://www.w3.org/2001/mstts\" xmlns:emo=\"http://www.w3.org/2009/10/emotionml\" xml:lang=\"zh-CN\">` +
-		strings.ReplaceAll(pro.ElementString(text), `"`, `\"`) + `</speak>`
+		strings.ReplaceAll(pro.ElementStringHasLang(text), `"`, `\"`) + `</speak>`
 
 	return ssml
 }

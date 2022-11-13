@@ -27,6 +27,18 @@ func (v *VoiceProperty) ElementString(text string) string {
 		element = v.ExpressAs.ElementString(text, v.Prosody)
 	}
 
+	return `<voice name="` + v.VoiceName + `">` + element + `</voice>`
+}
+
+// ElementStringHasLang 转为带有lang标签的Voice元素字符串
+func (v *VoiceProperty) ElementStringHasLang(text string) string {
+	var element string
+	if v.Api == ApiEdge {
+		element = v.Prosody.ElementString(text)
+	} else {
+		element = v.ExpressAs.ElementString(text, v.Prosody)
+	}
+
 	return `<voice name="` + v.VoiceName + `"><lang xml:lang="zh-CN">` + element + `</lang></voice>`
 }
 
