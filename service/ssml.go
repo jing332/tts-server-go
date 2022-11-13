@@ -27,7 +27,7 @@ func (v *VoiceProperty) ElementString(text string) string {
 		element = v.ExpressAs.ElementString(text, v.Prosody)
 	}
 
-	return `<voice name="` + v.VoiceName + `">` + element + `</voice>`
+	return `<voice name="` + v.VoiceName + `"><lang xml:lang="zh-CN">` + element + `</lang></voice>`
 }
 
 type Prosody struct {

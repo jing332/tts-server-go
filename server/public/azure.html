@@ -220,7 +220,8 @@
                 </div>
                 <div class="modal-footer">
                     <button class="btn btn-primary" type="button" data-bs-toggle="collapse"
-                            data-bs-target="#qrCodeCollapse" aria-expanded="false" aria-controls="qrCodeCollapse" onclick="onQRCodeClick()">
+                            data-bs-target="#qrCodeCollapse" aria-expanded="false" aria-controls="qrCodeCollapse"
+                            onclick="onQRCodeClick()">
                         二维码
                     </button>
                     <button type="button" class="btn btn-success" onclick="openAppImport()">一键导入</button>
@@ -355,11 +356,13 @@
         return `\
         <speak xmlns="http://www.w3.org/2001/10/synthesis" xmlns:mstts="http://www.w3.org/2001/mstts" xmlns:emo="http://www.w3.org/2009/10/emotionml" version="1.0" xml:lang="en-US">\
           <voice name="${voiceName}">\
+          <lang xml:lang="zh-CN">
             <mstts:express-as style="${styleName}" styledegree="${styleDegree}" role="${roleName}">\
               <prosody rate="0%" pitch="0%">\
                   ${text}\
               </prosody >\
             </mstts:express-as>
+            </lang>
           </voice >\
         </speak > `;
     }

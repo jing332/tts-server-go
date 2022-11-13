@@ -67,16 +67,23 @@ func removePcmChar(s string) string {
 	return strings.ReplaceAll(s, "%", "")
 }
 
+const (
+	textVar  = "{{String(speakText).replace(/&/g, '&amp;').replace(/\"/g, '&quot;').replace(/'/g, '&apos;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/\\/g, '')}}"
+	textVar2 = `{{String(speakText).replace(/&/g, '&amp;').replace(/\"/g, '&quot;').replace(/'/g, '&apos;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/\\/g, '')}}`
+	rateVar  = "{{(speakSpeed -10) * 2}}"
+)
+
 /* 生成阅读APP朗读朗读引擎Json (Edge, Azure) */
 func genLegodoJson(api, name, voiceName, styleName, styleDegree, roleName, voiceFormat, token, concurrentRate string) ([]byte, error) {
 	t := time.Now().UnixNano() / 1e6 //毫秒时间戳
 	var url string
 	if styleName == "" { /* Edge大声朗读 */
 		url = api + ` ,{"method":"POST","body":"<speak xmlns=\"http://www.w3.org/2001/10/synthesis\" xmlns:mstts=\"http://www.w3.org/2001/mstts\" xmlns:emo=\"http://www.w3.org/2009/10/emotionml\" version=\"1.0\" xml:lang=\"en-US\"><voice name=\"` +
-			voiceName + `\"><prosody rate=\"{{(speakSpeed -10) * 2}}%\" pitch=\"+0Hz\">{{String(speakText).replace(/&/g, '&amp;').replace(/\"/g, '&quot;').replace(/'/g, '&apos;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/\\/g, '')}}</prosody></voice></speak>"}`
+			voiceName + `\"><prosody rate=\"` + rateVar + `%\" pitch=\"+0Hz\">` + textVar2 + `</prosody></voice></speak>"}`
 	} else { /* Azure TTS */
 		url = api + ` ,{"method":"POST","body":"<speak xmlns=\"http://www.w3.org/2001/10/synthesis\" xmlns:mstts=\"http://www.w3.org/2001/mstts\" xmlns:emo=\"http://www.w3.org/2009/10/emotionml\" version=\"1.0\" xml:lang=\"en-US\"><voice name=\"` +
-			voiceName + `\"><mstts:express-as style=\"` + styleName + `\" styledegree=\"` + styleDegree + `\" role=\"` + roleName + `\"><prosody rate=\"{{(speakSpeed -10) * 2}}%\" pitch=\"+0Hz\">{{String(speakText).replace(/&/g, '&amp;').replace(/\"/g, '&quot;').replace(/'/g, '&apos;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/\\/g, '')}}</prosody> </mstts:express-as></voice></speak>"}`
+			voiceName + `\"><lang xml:lang=\"zh-CN\"><mstts:express-as style=\"` + styleName + `\" styledegree=\"` + styleDegree + `\" role=\"` + roleName +
+			`\"><prosody rate=\"` + rateVar + `%\" pitch=\"+0Hz\">` + textVar2 + `</prosody> </mstts:express-as></lang></voice></speak>"}`
 	}
 
 	head := `{"Content-Type":"text/plain","Format":"` + voiceFormat + `", "Token":"` + token + `"}`
@@ -90,11 +97,6 @@ func genLegodoJson(api, name, voiceName, styleName, styleDegree, roleName, voice
 
 	return body, nil
 }
-
-const (
-	textVar = "{{String(speakText).replace(/&/g, '&amp;').replace(/\"/g, '&quot;').replace(/'/g, '&apos;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/\\/g, '')}}"
-	rateVar = "{{(speakSpeed -10) * 2}}"
-)
 
 /* 生成阅读APP朗读引擎Json (Creation) */
 func genLegadoCreationJson(api, name string, creationJson *CreationJson, token, concurrentRate string) ([]byte, error) {
