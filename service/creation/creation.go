@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	tts_server_go "github.com/jing332/tts-server-go"
 	"github.com/jing332/tts-server-go/service"
 	"io"
@@ -20,9 +21,8 @@ const (
 
 var (
 	// TokenErr Token已失效
-	TokenErr = errors.New("unauthorized")
-	// httpStatusCodeErr Http状态码不等于200
-	httpStatusCodeErr = errors.New("http status code not equal 200")
+	TokenErr          = errors.New("unauthorized")
+	httpStatusCodeErr = errors.New("http状态码不等于200(OK)")
 )
 
 type TTS struct {
@@ -120,7 +120,7 @@ func (t *TTS) speakBySsml(ctx context.Context, ssml, format string) ([]byte, err
 		return nil, err
 	}
 
-	if resp.StatusCode != http.StatusOK { /* 服务器返回错误 大概率是SSML格式有问题 */
+	if resp.StatusCode != http.StatusOK { /* 服务器返回错误 大概率是SSML格式问题 和 频率过高 */
 		return nil, errors.New(string(data))
 	}
 
@@ -147,7 +147,7 @@ func GetVoices(token string) ([]byte, error) {
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		return nil, httpStatusCodeErr
+		return nil, fmt.Errorf("%v: %v, %v", httpStatusCodeErr, resp.StatusCode, resp.Status)
 	}
 
 	body, err := io.ReadAll(resp.Body)
@@ -165,7 +165,7 @@ func GetToken() (string, error) {
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		return "", httpStatusCodeErr
+		return "", fmt.Errorf("%v: %v, %v", httpStatusCodeErr, resp.StatusCode, resp.Status)
 	}
 
 	value := make(map[string]string)

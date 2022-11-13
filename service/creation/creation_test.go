@@ -11,8 +11,8 @@ import (
 func TestGetToSsml(t *testing.T) {
 	pro := &service.VoiceProperty{Api: service.ApiCreation, VoiceName: "zh-CN-XiaoxiaoNeural",
 		VoiceId:   "5f55541d-c844-4e04-a7f8-1723ffbea4a9",
-		Prosody:   service.Prosody{Rate: 0, Pitch: 0, Volume: 0},
-		ExpressAs: service.ExpressAs{Style: "angry", StyleDegree: 1.5, Role: "body"}}
+		Prosody:   &service.Prosody{Rate: 0, Pitch: 0, Volume: 0},
+		ExpressAs: &service.ExpressAs{Style: "angry", StyleDegree: 1.5, Role: "body"}}
 
 	t.Log(ToSsml("测试文本", pro))
 }
@@ -20,24 +20,29 @@ func TestGetToSsml(t *testing.T) {
 func TestGetAudioUseContext(t *testing.T) {
 	pro := &service.VoiceProperty{Api: service.ApiCreation, VoiceName: "zh-CN-XiaoxiaoNeural",
 		VoiceId:   "5f55541d-c844-4e04-a7f8-1723ffbea4a9",
-		Prosody:   service.Prosody{Rate: 0, Pitch: 0, Volume: 0},
-		ExpressAs: service.ExpressAs{Style: "angry", StyleDegree: 1.5, Role: "body"}}
+		Prosody:   &service.Prosody{Rate: 0, Pitch: 0, Volume: 0},
+		ExpressAs: &service.ExpressAs{Style: "angry", StyleDegree: 1.5, Role: "body"}}
 
 	text := "我是测试文本"
 	format := "audio-48khz-96kbitrate-mono-mp3"
 
-	ctx, cancel := context.WithCancel(context.Background())
+	ctx, _ := context.WithCancel(context.Background())
 	c := &TTS{Client: &http.Client{Timeout: time.Second * 2}}
 	go func() {
-		time.Sleep(500)
-		t.Log("canceled")
-		cancel()
+		//time.Sleep(500)
+		//t.Log("canceled")
+		//cancel()
 	}()
-	data, err := c.GetAudioUseContext(ctx, text, format, pro)
-	if err != nil {
-		t.Fatal(err)
+
+	for i := 0; i < 1000; i++ {
+		data, err := c.GetAudioUseContext(ctx, text, format, pro)
+		if err != nil {
+			t.Fatal(err)
+		}
+		t.Log(len(data))
+		time.Sleep(5 * time.Second)
 	}
-	t.Log(len(data))
+
 }
 
 //
