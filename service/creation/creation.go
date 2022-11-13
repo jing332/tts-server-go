@@ -54,7 +54,7 @@ func (t *TTS) GetAudioUseContext(ctx context.Context, text, format string, pro *
 	if t.token == "" {
 		s, err := GetToken()
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("获取token失败：%v", err)
 		}
 		t.token = s
 	}
