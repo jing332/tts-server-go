@@ -60,6 +60,13 @@ type ExpressAs struct {
 }
 
 func (e *ExpressAs) ElementString(text string, prosody *Prosody) string {
+	if e.Style == "" {
+		e.Style = "general"
+	}
+	if e.Role == "" {
+		e.Role = "default"
+	}
+
 	return `<mstts:express-as style="` + e.Style +
 		`" styledegree="` + strconv.FormatFloat(float64(e.StyleDegree), 'f', 1, 32) +
 		`" role="` + e.Role +
