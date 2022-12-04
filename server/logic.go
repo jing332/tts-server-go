@@ -25,15 +25,16 @@ type LegadoJson struct {
 }
 
 type CreationJson struct {
-	Text        string `json:"text"`
-	VoiceName   string `json:"voiceName"`
-	VoiceId     string `json:"voiceId"`
-	Rate        string `json:"rate"`
-	Volume      string `json:"volume"`
-	Style       string `json:"style"`
-	StyleDegree string `json:"styleDegree"`
-	Role        string `json:"role"`
-	Format      string `json:"format"`
+	Text            string `json:"text"`
+	VoiceName       string `json:"voiceName"`
+	VoiceId         string `json:"voiceId"`
+	SecondaryLocale string `json:"secondaryLocale"`
+	Rate            string `json:"rate"`
+	Volume          string `json:"volume"`
+	Style           string `json:"style"`
+	StyleDegree     string `json:"styleDegree"`
+	Role            string `json:"role"`
+	Format          string `json:"format"`
 }
 
 func (c *CreationJson) VoiceProperty() *service.VoiceProperty {
@@ -59,7 +60,7 @@ func (c *CreationJson) VoiceProperty() *service.VoiceProperty {
 
 	prosody := &service.Prosody{Rate: int8(rate), Volume: int8(volume)}
 	expressAs := &service.ExpressAs{Style: c.Style, StyleDegree: float32(styleDegree), Role: c.Role}
-	return &service.VoiceProperty{VoiceName: c.VoiceName, VoiceId: c.VoiceId, Prosody: prosody, ExpressAs: expressAs}
+	return &service.VoiceProperty{VoiceName: c.VoiceName, VoiceId: c.VoiceId, SecondaryLocale: c.SecondaryLocale, Prosody: prosody, ExpressAs: expressAs}
 }
 
 // 移除字符串中 % 符号
@@ -74,16 +75,22 @@ const (
 )
 
 /* 生成阅读APP朗读朗读引擎Json (Edge, Azure) */
-func genLegodoJson(api, name, voiceName, styleName, styleDegree, roleName, voiceFormat, token, concurrentRate string) ([]byte, error) {
+func genLegadoJson(api, name, voiceName, secondaryLocale, styleName, styleDegree, roleName, voiceFormat, token, concurrentRate string) ([]byte, error) {
 	t := time.Now().UnixNano() / 1e6 //毫秒时间戳
 	var url string
 	if styleName == "" { /* Edge大声朗读 */
 		url = api + ` ,{"method":"POST","body":"<speak xmlns=\"http://www.w3.org/2001/10/synthesis\" xmlns:mstts=\"http://www.w3.org/2001/mstts\" xmlns:emo=\"http://www.w3.org/2009/10/emotionml\" version=\"1.0\" xml:lang=\"en-US\"><voice name=\"` +
 			voiceName + `\"><prosody rate=\"` + rateVar + `%\" pitch=\"+0Hz\">` + textVar2 + `</prosody></voice></speak>"}`
 	} else { /* Azure TTS */
-		url = api + ` ,{"method":"POST","body":"<speak xmlns=\"http://www.w3.org/2001/10/synthesis\" xmlns:mstts=\"http://www.w3.org/2001/mstts\" xmlns:emo=\"http://www.w3.org/2009/10/emotionml\" version=\"1.0\" xml:lang=\"en-US\"><voice name=\"` +
-			voiceName + `\"><lang xml:lang=\"zh-CN\"><mstts:express-as style=\"` + styleName + `\" styledegree=\"` + styleDegree + `\" role=\"` + roleName +
-			`\"><prosody rate=\"` + rateVar + `%\" pitch=\"+0Hz\">` + textVar2 + `</prosody> </mstts:express-as></lang></voice></speak>"}`
+		if secondaryLocale == "" {
+			url = api + ` ,{"method":"POST","body":"<speak xmlns=\"http://www.w3.org/2001/10/synthesis\" xmlns:mstts=\"http://www.w3.org/2001/mstts\" xmlns:emo=\"http://www.w3.org/2009/10/emotionml\" version=\"1.0\" xml:lang=\"en-US\"><voice name=\"` +
+				voiceName + `\"><mstts:express-as style=\"` + styleName + `\" styledegree=\"` + styleDegree + `\" role=\"` + roleName +
+				`\"><prosody rate=\"` + rateVar + `%\" pitch=\"+0Hz\">` + textVar2 + `</prosody> </mstts:express-as></voice></speak>"}`
+		} else {
+			url = api + ` ,{"method":"POST","body":"<speak xmlns=\"http://www.w3.org/2001/10/synthesis\" xmlns:mstts=\"http://www.w3.org/2001/mstts\" xmlns:emo=\"http://www.w3.org/2009/10/emotionml\" version=\"1.0\" xml:lang=\"en-US\"><voice name=\"` +
+				voiceName + `\"><lang xml:lang=\"` + secondaryLocale + `\"><mstts:express-as style=\"` + styleName + `\" styledegree=\"` + styleDegree + `\" role=\"` + roleName +
+				`\"><prosody rate=\"` + rateVar + `%\" pitch=\"+0Hz\">` + textVar2 + `</prosody> </mstts:express-as></lang></voice></speak>"}`
+		}
 	}
 
 	head := `{"Content-Type":"text/plain","Format":"` + voiceFormat + `", "Token":"` + token + `"}`

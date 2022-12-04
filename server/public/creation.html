@@ -67,6 +67,14 @@
                 <div class="form-text">列表加载可能有点慢，请稍等一下！</div>
             </div>
         </div>
+        <div class="row" id="divSecondaryLocale" hidden="hidden">
+            <div class="col">
+                <label class="form-label">二级语言：</label>
+                <select name="secondaryLocale" class="form-select" onchange="">
+                </select>
+                <div class="form-text">实际使用此语言朗读。目前微软仅支持 JennyMultilingual</div>
+            </div>
+        </div>
         <div class="row">
             <div class="col">
                 <label class="form-label">风格：</label>
@@ -349,15 +357,33 @@
         } else {
             roleElement.disabled = true
         }
+
+        // 二级语言
+        let secLocaleListElement = document.getElementsByName('secondaryLocale')[0]
+        let secondaryLocaleList = voice['properties']['SecondaryLocales'].split(',')
+        secondaryLocaleList.forEach(locale => {
+            if (locale.length > 0) {
+                let option = document.createElement('option')
+                option.value = locale
+                option.innerText = cnLocalLanguage[locale] || locale
+                if (locale === "zh-CN") option.selected = true
+                secLocaleListElement.appendChild(option)
+            }
+        })
+        document.getElementById('divSecondaryLocale').hidden = secLocaleListElement.childElementCount < 1
+
         updateName()
     }
 
-    function createCreationJson(text, voiceName, voiceId, styleName, styleDegree, roleName, voiceFormat) {
+    function createCreationJson(text, voiceName, voiceId, secondaryLocale, styleName, styleDegree, roleName, voiceFormat) {
         return JSON.stringify({
             text: text,
             voiceName: voiceName,
             voiceId: voiceId,
+            rate: "0",
+            volume: "0",
             style: styleName,
+            secondaryLocale: secondaryLocale,
             styleDegree: styleDegree,
             role: roleName,
             format: voiceFormat
@@ -368,6 +394,7 @@
         let headers = {'Content-Type': 'text/plain'};
 
         let voiceName = document.getElementsByName('voiceName')[0].value;
+        let secondaryLocale = document.getElementsByName('secondaryLocale')[0].value
         let voiceFormat = document.getElementsByName('voiceFormat')[0].value;
         let styleName = document.getElementsByName('styleName')[0].value;
         let styleDegree = document.getElementsByName('styleDegree')[0].value;
@@ -379,7 +406,7 @@
         localStorage.setItem("token", token)
 
         let voiceId = voices[voiceName]['id']
-        let body = createCreationJson(previewText, voiceName, voiceId, styleName, styleDegree, roleName, voiceFormat)
+        let body = createCreationJson(previewText, voiceName, voiceId, secondaryLocale, styleName, styleDegree, roleName, voiceFormat)
         let button = document.getElementById('previewButton');
         let textInfo = document.getElementById('audioInfoLabel')
         button.disabled = true;
@@ -419,6 +446,7 @@
         let name = document.getElementsByName('name')[0].value;
         let voiceName = document.getElementsByName('voiceName')[0].value;
         let voiceId = voices[voiceName]['id']
+        let secondaryLocale = document.getElementsByName('secondaryLocale')[0].value
         let styleName = document.getElementsByName('styleName')[0].value;
         let styleDegree = document.getElementsByName('styleDegree')[0].value;
         let roleName = document.getElementsByName('roleName')[0].value;
@@ -437,6 +465,7 @@
             + '&isCreation=1'
             + '&token=' + token
             + '&concurrentRate=' + interval
+        if (secondaryLocale.length > 0) url += "&secondaryLocale=" + secondaryLocale
 
         let modal = new bootstrap.Modal(document.getElementById('legadoUrlModal'))
         document.getElementById('legadoUrlQRCode').innerHTML = ''

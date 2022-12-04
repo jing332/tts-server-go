@@ -378,24 +378,24 @@ func (s *GracefulServer) legadoAPIHandler(w http.ResponseWriter, r *http.Request
 	isCreation := params.Get("isCreation")
 	apiUrl := params.Get("api")
 	name := params.Get("name")
-	voiceName := params.Get("voiceName")     /* 发音人 */
-	voiceId := params.Get("voiceId")         /* 发音人ID (Creation接口) */
-	styleName := params.Get("styleName")     /* 风格 */
-	styleDegree := params.Get("styleDegree") /* 风格强度(0.1-2.0) */
-	roleName := params.Get("roleName")       /* 角色(身份) */
-	voiceFormat := params.Get("voiceFormat") /* 音频格式 */
+	voiceName := params.Get("voiceName")             /* 发音人 */
+	voiceId := params.Get("voiceId")                 /* 发音人ID (Creation接口) */
+	secondaryLocale := params.Get("secondaryLocale") /* 二级语言 */
+	styleName := params.Get("styleName")             /* 风格 */
+	styleDegree := params.Get("styleDegree")         /* 风格强度(0.1-2.0) */
+	roleName := params.Get("roleName")               /* 角色(身份) */
+	voiceFormat := params.Get("voiceFormat")         /* 音频格式 */
 	token := params.Get("token")
 	concurrentRate := params.Get("concurrentRate") /* 并发率(请求间隔) 毫秒为单位 */
 
 	var jsonStr []byte
 	var err error
 	if isCreation == "1" {
-		creationJson := &CreationJson{VoiceName: voiceName, VoiceId: voiceId, Style: styleName,
+		creationJson := &CreationJson{VoiceName: voiceName, VoiceId: voiceId, SecondaryLocale: secondaryLocale, Style: styleName,
 			StyleDegree: styleDegree, Role: roleName, Format: voiceFormat}
 		jsonStr, err = genLegadoCreationJson(apiUrl, name, creationJson, token, concurrentRate)
-
 	} else {
-		jsonStr, err = genLegodoJson(apiUrl, name, voiceName, styleName, styleDegree, roleName, voiceFormat, token,
+		jsonStr, err = genLegadoJson(apiUrl, name, voiceName, secondaryLocale, styleName, styleDegree, roleName, voiceFormat, token,
 			concurrentRate)
 	}
 	if err != nil {

@@ -11,9 +11,10 @@ const (
 )
 
 type VoiceProperty struct {
-	Api       int
-	VoiceName string
-	VoiceId   string
+	Api             int
+	VoiceName       string
+	VoiceId         string
+	SecondaryLocale string
 	*Prosody
 	*ExpressAs
 }
@@ -26,20 +27,11 @@ func (v *VoiceProperty) ElementString(text string) string {
 	} else {
 		element = v.ExpressAs.ElementString(text, v.Prosody)
 	}
-
-	return `<voice name="` + v.VoiceName + `">` + element + `</voice>`
-}
-
-// ElementStringHasLang 转为带有lang标签的Voice元素字符串
-func (v *VoiceProperty) ElementStringHasLang(text string) string {
-	var element string
-	if v.Api == ApiEdge {
-		element = v.Prosody.ElementString(text)
-	} else {
-		element = v.ExpressAs.ElementString(text, v.Prosody)
+	if v.SecondaryLocale == "" {
+		return `<voice name="` + v.VoiceName + `">` + element + `</voice>`
+	} else { // 二级语言标签
+		return `<voice name="` + v.VoiceName + `"><lang xml:lang="` + v.SecondaryLocale + `">` + element + `</lang></voice>`
 	}
-
-	return `<voice name="` + v.VoiceName + `"><lang xml:lang="zh-CN">` + element + `</lang></voice>`
 }
 
 type Prosody struct {

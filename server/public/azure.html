@@ -64,6 +64,14 @@
                 <div class="form-text">声音列表加载可能有点慢，请稍等一下！</div>
             </div>
         </div>
+        <div class="row" id="divSecondaryLocale" hidden="hidden">
+            <div class="col">
+                <label class="form-label">二级语言：</label>
+                <select id="secondaryLocale" class="form-select" onchange="">
+                </select>
+                <div class="form-text">实际使用此语言朗读。目前微软仅支持 JennyMultilingual</div>
+            </div>
+        </div>
         <div class="row">
             <div class="col">
                 <label class="form-label">风格：</label>
@@ -348,14 +356,40 @@
         } else {
             roleElement.disabled = true
         }
+
+        let secondaryLocaleElement = document.getElementById('secondaryLocale')
+        let localeList = voice['SecondaryLocaleList']
+        if (localeList)
+            localeList.forEach(locale => {
+                let option = document.createElement('option')
+                option.value = locale
+                option.innerText = cnLocalLanguage[locale] || locale
+                if (locale === "zh-CN") option.selected = true
+                secondaryLocaleElement.appendChild(option)
+            })
+
+        document.getElementById('divSecondaryLocale').hidden = secondaryLocaleElement.childElementCount < 1
+
         updateName()
     }
 
-    function createSSML(text, voiceName, styleName, styleDegree, roleName) {
-        return `\
+    function createSSML(text, voiceName, secondaryLocale, styleName, styleDegree, roleName) {
+        if (secondaryLocale.length < 1) {
+            return `\
         <speak xmlns="http://www.w3.org/2001/10/synthesis" xmlns:mstts="http://www.w3.org/2001/mstts" xmlns:emo="http://www.w3.org/2009/10/emotionml" version="1.0" xml:lang="en-US">\
           <voice name="${voiceName}">\
-          <lang xml:lang="zh-CN">
+            <mstts:express-as style="${styleName}" styledegree="${styleDegree}" role="${roleName}">\
+              <prosody rate="0%" pitch="0%">\
+                  ${text}\
+              </prosody >\
+            </mstts:express-as>
+          </voice >\
+        </speak > `;
+        } else {
+            return `\
+        <speak xmlns="http://www.w3.org/2001/10/synthesis" xmlns:mstts="http://www.w3.org/2001/mstts" xmlns:emo="http://www.w3.org/2009/10/emotionml" version="1.0" xml:lang="en-US">\
+          <voice name="${voiceName}">\
+          <lang xml:lang="${secondaryLocale}">
             <mstts:express-as style="${styleName}" styledegree="${styleDegree}" role="${roleName}">\
               <prosody rate="0%" pitch="0%">\
                   ${text}\
@@ -364,6 +398,7 @@
             </lang>
           </voice >\
         </speak > `;
+        }
     }
 
     function preview() {
@@ -371,6 +406,7 @@
 
         let voiceName = document.getElementsByName('voiceName')[0].value;
         let voiceFormat = document.getElementsByName('voiceFormat')[0].value;
+        let secondaryLocale = document.getElementById('secondaryLocale').value
         let styleName = document.getElementsByName('styleName')[0].value;
         let styleDegree = document.getElementsByName('styleDegree')[0].value;
         let roleName = document.getElementsByName('roleName')[0].value;
@@ -381,7 +417,7 @@
         if (token) headers['Token'] = token
         headers['Format'] = voiceFormat
 
-        let body = createSSML(previewText, voiceName, styleName, styleDegree, roleName)
+        let body = createSSML(previewText, voiceName, secondaryLocale, styleName, styleDegree, roleName)
         let button = document.getElementById('previewButton');
         let textInfo = document.getElementById('audioInfoLabel')
         button.disabled = true;
@@ -436,6 +472,10 @@
             + '&voiceFormat=' + voiceFormat
             + '&token=' + token
             + '&concurrentRate=' + interval
+
+        let secondaryLocale = document.getElementById('secondaryLocale').value
+        if (secondaryLocale.length > 0) url += "&secondaryLocale=" + secondaryLocale
+
         let modal = new bootstrap.Modal(document.getElementById('legadoUrlModal'))
         document.getElementById('legadoUrl').value = url;
         document.getElementById('legadoUrlQRCode').innerHTML = ''
