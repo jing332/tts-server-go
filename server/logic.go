@@ -3,7 +3,7 @@ package server
 import (
 	"bytes"
 	"encoding/json"
-	"github.com/jing332/tts-server-go/service"
+	"github.com/jing332/tts-server-go/tts"
 	log "github.com/sirupsen/logrus"
 	"strconv"
 	"strings"
@@ -37,7 +37,7 @@ type CreationJson struct {
 	Format          string `json:"format"`
 }
 
-func (c *CreationJson) VoiceProperty() *service.VoiceProperty {
+func (c *CreationJson) VoiceProperty() *tts.VoiceProperty {
 	rate, err := strconv.ParseInt(removePcmChar(c.Rate), 10, 8)
 	if err != nil {
 		log.Errorf("转换语速失败：%s", c.Rate)
@@ -58,9 +58,9 @@ func (c *CreationJson) VoiceProperty() *service.VoiceProperty {
 		err = nil
 	}
 
-	prosody := &service.Prosody{Rate: int8(rate), Volume: int8(volume)}
-	expressAs := &service.ExpressAs{Style: c.Style, StyleDegree: float32(styleDegree), Role: c.Role}
-	return &service.VoiceProperty{VoiceName: c.VoiceName, VoiceId: c.VoiceId, SecondaryLocale: c.SecondaryLocale, Prosody: prosody, ExpressAs: expressAs}
+	prosody := &tts.Prosody{Rate: int8(rate), Volume: int8(volume)}
+	expressAs := &tts.ExpressAs{Style: c.Style, StyleDegree: float32(styleDegree), Role: c.Role}
+	return &tts.VoiceProperty{VoiceName: c.VoiceName, VoiceId: c.VoiceId, SecondaryLocale: c.SecondaryLocale, Prosody: prosody, ExpressAs: expressAs}
 }
 
 // 移除字符串中 % 符号
