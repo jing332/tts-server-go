@@ -6,7 +6,6 @@ import (
 
 const (
 	ApiEdge     = 0
-	ApiAzure    = 1
 	ApiCreation = 2
 )
 
