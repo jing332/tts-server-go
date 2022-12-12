@@ -6,7 +6,7 @@ import (
 	"errors"
 	"fmt"
 	tts_server_go "github.com/jing332/tts-server-go"
-	"github.com/jing332/tts-server-go/service"
+	"github.com/jing332/tts-server-go/tts"
 	"io"
 	"net/http"
 	"strings"
@@ -35,8 +35,8 @@ func New() *TTS {
 }
 
 // ToSsml 转为完整的SSML
-func ToSsml(text string, pro *service.VoiceProperty) string {
-	pro.Api = service.ApiCreation
+func ToSsml(text string, pro *tts.VoiceProperty) string {
+	pro.Api = tts.ApiCreation
 	ssml := `<!--ID=B7267351-473F-409D-9765-754A8EBCDE05;Version=1|{\"VoiceNameToIdMapItems\":[{\"Id\":\"` +
 		pro.VoiceId + `\",\"Name\":\"Microsoft Server Speech Text to Speech Voice (zh-CN, XiaoxiaoNeural)\",\"ShortName\":\"` +
 		pro.VoiceName + `\",\"Locale\":\"zh-CN\",\"VoiceType\":\"StandardVoice\"}]}-->\n<!--ID=5B95B1CC-2C7B-494F-B746-CF22A0E779B7;Version=1|{\"Locales\":{\"zh-CN\":{\"AutoApplyCustomLexiconFiles\":[{}]}}}-->\n` +
@@ -46,11 +46,11 @@ func ToSsml(text string, pro *service.VoiceProperty) string {
 	return ssml
 }
 
-func (t *TTS) GetAudio(text, format string, pro *service.VoiceProperty) (audio []byte, err error) {
+func (t *TTS) GetAudio(text, format string, pro *tts.VoiceProperty) (audio []byte, err error) {
 	return t.GetAudioUseContext(nil, text, format, pro)
 }
 
-func (t *TTS) GetAudioUseContext(ctx context.Context, text, format string, pro *service.VoiceProperty) (audio []byte, err error) {
+func (t *TTS) GetAudioUseContext(ctx context.Context, text, format string, pro *tts.VoiceProperty) (audio []byte, err error) {
 	if t.token == "" {
 		s, err := GetToken()
 		if err != nil {

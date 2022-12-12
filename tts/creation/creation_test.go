@@ -2,26 +2,26 @@ package creation
 
 import (
 	"context"
-	"github.com/jing332/tts-server-go/service"
+	"github.com/jing332/tts-server-go/tts"
 	"net/http"
 	"testing"
 	"time"
 )
 
 func TestGetToSsml(t *testing.T) {
-	pro := &service.VoiceProperty{Api: service.ApiCreation, VoiceName: "zh-CN-XiaoxiaoNeural",
+	pro := &tts.VoiceProperty{Api: tts.ApiCreation, VoiceName: "zh-CN-XiaoxiaoNeural",
 		VoiceId:   "5f55541d-c844-4e04-a7f8-1723ffbea4a9",
-		Prosody:   &service.Prosody{Rate: 0, Pitch: 0, Volume: 0},
-		ExpressAs: &service.ExpressAs{Style: "angry", StyleDegree: 1.5, Role: "body"}}
+		Prosody:   &tts.Prosody{Rate: 0, Pitch: 0, Volume: 0},
+		ExpressAs: &tts.ExpressAs{Style: "angry", StyleDegree: 1.5, Role: "body"}}
 
 	t.Log(ToSsml("测试文本", pro))
 }
 
 func TestGetAudioUseContext(t *testing.T) {
-	pro := &service.VoiceProperty{Api: service.ApiCreation, VoiceName: "zh-CN-XiaoxiaoNeural",
+	pro := &tts.VoiceProperty{Api: tts.ApiCreation, VoiceName: "zh-CN-XiaoxiaoNeural",
 		VoiceId:   "5f55541d-c844-4e04-a7f8-1723ffbea4a9",
-		Prosody:   &service.Prosody{Rate: 0, Pitch: 0, Volume: 0},
-		ExpressAs: &service.ExpressAs{Style: "angry", StyleDegree: 1.5, Role: "body"}}
+		Prosody:   &tts.Prosody{Rate: 0, Pitch: 0, Volume: 0},
+		ExpressAs: &tts.ExpressAs{Style: "angry", StyleDegree: 1.5, Role: "body"}}
 
 	text := "我是测试文本"
 	format := "audio-48khz-96kbitrate-mono-mp3"
