@@ -1,10 +1,15 @@
 package tts_server_go
 
 import (
+	uuid "github.com/satori/go.uuid"
 	"net"
 	"regexp"
 	"time"
 )
+
+func GetUUID() string {
+	return uuid.NewV4().String()
+}
 
 func GetISOTime() string {
 	T := time.Now().String()

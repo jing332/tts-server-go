@@ -3,9 +3,8 @@ package azure
 import (
 	"context"
 	"fmt"
-	"github.com/asters1/tools"
 	"github.com/gorilla/websocket"
-	tts_server_go "github.com/jing332/tts-server-go"
+	tsg "github.com/jing332/tts-server-go"
 	log "github.com/sirupsen/logrus"
 	"io"
 	"net/http"
@@ -104,7 +103,7 @@ func (t *TTS) GetAudio(ssml, format string) (audioData []byte, err error) {
 }
 
 func (t *TTS) GetAudioStream(ssml, format string, read func([]byte)) error {
-	t.uuid = tools.GetUUID()
+	t.uuid = tsg.GetUUID()
 	if t.conn == nil {
 		err := t.NewConn()
 		if err != nil {
@@ -155,7 +154,7 @@ func (t *TTS) GetAudioStream(ssml, format string, read func([]byte)) error {
 }
 
 func (t *TTS) sendConfigMessage(format string) error {
-	timestamp := tts_server_go.GetISOTime()
+	timestamp := tsg.GetISOTime()
 	m1 := "Path: speech.config\r\nX-RequestId: " + t.uuid + "\r\nX-Timestamp: " + timestamp +
 		"\r\nContent-Type: application/json\r\n\r\n{\"context\":{\"system\":{\"name\":\"SpeechSDK\",\"version\":\"1.19.0\",\"build\":\"JavaScript\",\"lang\":\"JavaScript\",\"os\":{\"platform\":\"Browser/Linux x86_64\",\"name\":\"Mozilla/5.0 (X11; Linux x86_64; rv:78.0) Gecko/20100101 Firefox/78.0\",\"version\":\"5.0 (X11)\"}}}}"
 	m2 := "Path: synthesis.context\r\nX-RequestId: " + t.uuid + "\r\nX-Timestamp: " + timestamp +
@@ -175,7 +174,7 @@ func (t *TTS) sendConfigMessage(format string) error {
 }
 
 func (t *TTS) sendSsmlMessage(ssml string) error {
-	msg := "Path: ssml\r\nX-RequestId: " + t.uuid + "\r\nX-Timestamp: " + tts_server_go.GetISOTime() + "\r\nContent-Type: application/ssml+xml\r\n\r\n" + ssml
+	msg := "Path: ssml\r\nX-RequestId: " + t.uuid + "\r\nX-Timestamp: " + tsg.GetISOTime() + "\r\nContent-Type: application/ssml+xml\r\n\r\n" + ssml
 	_ = t.conn.SetWriteDeadline(time.Now().Add(t.WriteTimeout))
 	err := t.conn.WriteMessage(websocket.TextMessage, []byte(msg))
 	if err != nil {

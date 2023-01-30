@@ -3,9 +3,8 @@ package edge
 import (
 	"context"
 	"fmt"
-	"github.com/asters1/tools"
 	"github.com/gorilla/websocket"
-	"github.com/jing332/tts-server-go"
+	tsg "github.com/jing332/tts-server-go"
 	log "github.com/sirupsen/logrus"
 	"math/rand"
 	"net"
@@ -101,7 +100,7 @@ func (t *TTS) CloseConn() {
 }
 
 func (t *TTS) GetAudio(ssml, format string) (audioData []byte, err error) {
-	t.uuid = tools.GetUUID()
+	t.uuid = tsg.GetUUID()
 	if t.conn == nil {
 		err := t.NewConn()
 		if err != nil {
@@ -149,7 +148,7 @@ func (t *TTS) GetAudio(ssml, format string) (audioData []byte, err error) {
 }
 
 func (t *TTS) sendConfigMessage(format string) error {
-	cfgMsg := "X-Timestamp:" + tts_server_go.GetISOTime() + "\r\nContent-Type:application/json; charset=utf-8\r\n" + "Path:speech.config\r\n\r\n" +
+	cfgMsg := "X-Timestamp:" + tsg.GetISOTime() + "\r\nContent-Type:application/json; charset=utf-8\r\n" + "Path:speech.config\r\n\r\n" +
 		`{"context":{"synthesis":{"audio":{"metadataoptions":{"sentenceBoundaryEnabled":"false","wordBoundaryEnabled":"false"},"outputFormat":"` + format + `"}}}}`
 	_ = t.conn.SetWriteDeadline(time.Now().Add(t.WriteTimeout))
 	err := t.conn.WriteMessage(websocket.TextMessage, []byte(cfgMsg))
@@ -161,7 +160,7 @@ func (t *TTS) sendConfigMessage(format string) error {
 }
 
 func (t *TTS) sendSsmlMessage(ssml string) error {
-	msg := "Path: ssml\r\nX-RequestId: " + t.uuid + "\r\nX-Timestamp: " + tts_server_go.GetISOTime() + "\r\nContent-Type: application/ssml+xml\r\n\r\n" + ssml
+	msg := "Path: ssml\r\nX-RequestId: " + t.uuid + "\r\nX-Timestamp: " + tsg.GetISOTime() + "\r\nContent-Type: application/ssml+xml\r\n\r\n" + ssml
 	_ = t.conn.SetWriteDeadline(time.Now().Add(t.WriteTimeout))
 	err := t.conn.WriteMessage(websocket.TextMessage, []byte(msg))
 	if err != nil {
