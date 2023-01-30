@@ -20,9 +20,10 @@ const (
 
 type TTS struct {
 	DialTimeout  time.Duration
-	writeTimeout time.Duration
+	WriteTimeout time.Duration
 
-	wssUrl        string
+	dialContextCancel context.CancelFunc
+
 	uuid          string
 	conn          *websocket.Conn
 	onReadMessage func(messageType int, p []byte, errMessage error) (finished bool)
@@ -30,8 +31,8 @@ type TTS struct {
 
 func (t *TTS) NewConn() error {
 	log.Infoln("创建WebSocket连接(Azure)...")
-	if t.writeTimeout == 0 {
-		t.writeTimeout = time.Second * 2
+	if t.WriteTimeout == 0 {
+		t.WriteTimeout = time.Second * 2
 	}
 	if t.DialTimeout == 0 {
 		t.DialTimeout = time.Second * 3
@@ -41,19 +42,23 @@ func (t *TTS) NewConn() error {
 		EnableCompression: true,
 	}
 
-	head := tools.GetHeader(
-		`Accept-Encoding:gzip, deflate, br
-		User-Agent:Mozilla/5.0 (Linux; Android 7.1.2; M2012K11AC Build/N6F26Q; wv) AppleWebKit/537.36 (KHTML, like Gecko) Version/4.0 Chrome/81.0.4044.117 Mobile Safari/537.36
-		host:eastus.api.speech.microsoft.com
-		Origin:https://azure.microsoft.com`)
+	header := http.Header{}
+	header.Set("Accept-Encoding", "gzip, deflate, br")
+	header.Set("Origin", "https://azure.microsoft.com")
+	header.Set("User-Agent", "Mozilla/5.0 (Linux; Android 12; M2012K11AC Build/N6F26Q; wv) AppleWebKit/537.36 (KHTML, like Gecko) Version/4.0 Chrome/81.0.4044.117 Mobile Safari/537.36")
 
-	ctx, cancel := context.WithTimeout(context.Background(), t.DialTimeout)
-	defer cancel()
+	var ctx context.Context
+	ctx, t.dialContextCancel = context.WithTimeout(context.Background(), t.DialTimeout)
+	defer func() {
+		t.dialContextCancel()
+		t.dialContextCancel = nil
+	}()
 
 	var err error
-	t.conn, _, err = dl.DialContext(ctx, wssUrl+t.uuid, head)
+	var resp *http.Response
+	t.conn, resp, err = dl.DialContext(ctx, wssUrl+t.uuid, header)
 	if err != nil {
-		return err
+		return fmt.Errorf("%w: %s", err, resp.Status)
 	}
 
 	var size = 0
@@ -83,6 +88,9 @@ func (t *TTS) NewConn() error {
 
 func (t *TTS) CloseConn() {
 	if t.conn != nil {
+		if t.dialContextCancel != nil {
+			t.dialContextCancel()
+		}
 		_ = t.conn.Close()
 		t.conn = nil
 	}
@@ -152,12 +160,12 @@ func (t *TTS) sendConfigMessage(format string) error {
 		"\r\nContent-Type: application/json\r\n\r\n{\"context\":{\"system\":{\"name\":\"SpeechSDK\",\"version\":\"1.19.0\",\"build\":\"JavaScript\",\"lang\":\"JavaScript\",\"os\":{\"platform\":\"Browser/Linux x86_64\",\"name\":\"Mozilla/5.0 (X11; Linux x86_64; rv:78.0) Gecko/20100101 Firefox/78.0\",\"version\":\"5.0 (X11)\"}}}}"
 	m2 := "Path: synthesis.context\r\nX-RequestId: " + t.uuid + "\r\nX-Timestamp: " + timestamp +
 		"\r\nContent-Type: application/json\r\n\r\n{\"synthesis\":{\"audio\":{\"metadataOptions\":{\"sentenceBoundaryEnabled\":false,\"wordBoundaryEnabled\":false},\"outputFormat\":\"" + format + "\"}}}"
-	_ = t.conn.SetWriteDeadline(time.Now().Add(t.writeTimeout))
+	_ = t.conn.SetWriteDeadline(time.Now().Add(t.WriteTimeout))
 	err := t.conn.WriteMessage(websocket.TextMessage, []byte(m1))
 	if err != nil {
 		return fmt.Errorf("发送Config1失败: %s", err)
 	}
-	_ = t.conn.SetWriteDeadline(time.Now().Add(t.writeTimeout))
+	_ = t.conn.SetWriteDeadline(time.Now().Add(t.WriteTimeout))
 	err = t.conn.WriteMessage(websocket.TextMessage, []byte(m2))
 	if err != nil {
 		return fmt.Errorf("发送Config2失败: %s", err)
@@ -168,7 +176,7 @@ func (t *TTS) sendConfigMessage(format string) error {
 
 func (t *TTS) sendSsmlMessage(ssml string) error {
 	msg := "Path: ssml\r\nX-RequestId: " + t.uuid + "\r\nX-Timestamp: " + tts_server_go.GetISOTime() + "\r\nContent-Type: application/ssml+xml\r\n\r\n" + ssml
-	_ = t.conn.SetWriteDeadline(time.Now().Add(t.writeTimeout))
+	_ = t.conn.SetWriteDeadline(time.Now().Add(t.WriteTimeout))
 	err := t.conn.WriteMessage(websocket.TextMessage, []byte(msg))
 	if err != nil {
 		return fmt.Errorf("发送SSML失败: %s", err)

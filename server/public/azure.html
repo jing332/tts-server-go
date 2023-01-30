@@ -22,7 +22,7 @@
             <ul class="navbar-nav me-auto mb-2 mb-lg-0">
                 <li class="nav-item"><a class="nav-link" href="/">Edge接口</a></li>
                 <li class="nav-item"><a class="nav-link active" href="azure.html">Azure接口</a></li>
-                <li class="nav-item"><a class="nav-link" href="creation.html">Creation接口</a></li>
+                <li class="nav-item"><a class="nav-link" href="creation.html">Creation接口(已失效)</a></li>
             </ul>
             <p class="fst-italic">本页面源码修改自 <a href="https://github.com/wxxxcxx/ms-ra-forwarder">ms-ra-forwarder</a>
             </p>
@@ -115,13 +115,13 @@
                     <option value="audio-16khz-32kbitrate-mono-mp3">audio-16khz-32kbitrate-mono-mp3</option>
                     <option value="audio-16khz-64kbitrate-mono-mp3">audio-16khz-64kbitrate-mono-mp3</option>
                     <option value="audio-16khz-128kbitrate-mono-mp3">audio-16khz-128kbitrate-mono-mp3</option>
-                    <option value="audio-24khz-48kbitrate-mono-mp3">audio-24khz-48kbitrate-mono-mp3</option>
+                    <option value="audio-24khz-48kbitrate-mono-mp3" selected>audio-24khz-48kbitrate-mono-mp3</option>
                     <option value="audio-24khz-96kbitrate-mono-mp3">audio-24khz-96kbitrate-mono-mp3</option>
                     <option value="audio-24khz-160kbitrate-mono-mp3">audio-24khz-160kbitrate-mono-mp3</option>
                     <option value="audio-48khz-96kbitrate-mono-mp3">audio-48khz-96kbitrate-mono-mp3</option>
                     <option value="audio-48khz-192kbitrate-mono-mp3">audio-48khz-192kbitrate-mono-mp3</option>
                     <option value="webm-16khz-16bit-mono-opus">webm-16khz-16bit-mono-opus</option>
-                    <option value="webm-24khz-16bit-24kbps-mono-opus" selected>webm-24khz-16bit-24kbps-mono-opus
+                    <option value="webm-24khz-16bit-24kbps-mono-opus">webm-24khz-16bit-24kbps-mono-opus
                     </option>
                     <option value="webm-24khz-16bit-mono-opus">webm-24khz-16bit-mono-opus</option>
                     <option value="ogg-16khz-16bit-mono-opus">ogg-16khz-16bit-mono-opus</option>
@@ -129,8 +129,9 @@
                     <option value="ogg-48khz-16bit-mono-opus">ogg-48khz-16bit-mono-opus</option>
                 </select>
                 <div class="form-text">
-                    <p>可以调整音频的格式和质量。质量越高，生成的文件越大，对网速和流量的需求越高。请根据自己的情况选择。</p>
-                    <p>如果出现 “Unsupported output format: XXX” 错误，表示不支持当前格式。</p>
+                    <p>可以调整音频的格式和质量。质量越高，生成的文件越大，对网速和流量的需求越高。请根据自己的情况选择。
+                        <br>如果出现 “Unsupported output format: XXX” 错误，表示不支持当前格式。</p>
+                    <p>注：<b>webm-24khz-16bit-24kbps-mono-opus</b> 实际所耗流量是其音频大小的3倍有余，请谨慎使用。</p>
                 </div>
             </div>
 
