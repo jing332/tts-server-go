@@ -57,6 +57,9 @@ func (t *TTS) NewConn() error {
 	var resp *http.Response
 	t.conn, resp, err = dl.DialContext(ctx, wssUrl+t.uuid, header)
 	if err != nil {
+		if resp == nil {
+			return err
+		}
 		return fmt.Errorf("%w: %s", err, resp.Status)
 	}
 

@@ -70,9 +70,13 @@ func (t *TTS) NewConn() error {
 	}()
 
 	var err error
-	t.conn, _, err = dl.DialContext(ctx, wssUrl+t.uuid, header)
+	var resp *http.Response
+	t.conn, resp, err = dl.DialContext(ctx, wssUrl+t.uuid, header)
 	if err != nil {
-		return err
+		if resp == nil {
+			return err
+		}
+		return fmt.Errorf("%w: %s", err, resp.Status)
 	}
 
 	go func() {
